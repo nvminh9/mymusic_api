@@ -1,0 +1,32 @@
+{
+  "name": "mymusic_api",
+  "version": "1.0.0",
+  "description": "social and music streaming application",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --inspect src",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nvminh9/mymusic_api.git"
+  },
+  "keywords": [
+    "social",
+    "music",
+    "nodejs"
+  ],
+  "author": "nvminh9",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nvminh9/mymusic_api/issues"
+  },
+  "homepage": "https://github.com/nvminh9/mymusic_api#readme",
+  "dependencies": {
+    "express": "^4.21.1"
+  },
+  "devDependencies": {
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.7"
+  }
+}
