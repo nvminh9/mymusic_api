@@ -6,7 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const fs = require('fs');
 
-const port = 8080;
+const port = process.env.port || 3700;
 
 // Log all request
 app.use(morgan('combined'));
