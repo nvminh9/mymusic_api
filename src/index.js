@@ -5,15 +5,30 @@ const route = require('./routes');
 const cors = require('cors');
 const http = require('http');
 const fs = require('fs');
+const dotenv = require('dotenv');
+dotenv.config();
 
+// -- Config database (PostgreSQL) --
+const { sequelize } = require('./app/models/sequelize');
+// Sync (Đồng bộ lại database)
+(async () => {
+    // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
+    await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
+    console.log("✅ Database đã được đồng bộ!");
+})();
+
+// -- Config App Port --
 const port = process.env.port || 3700;
 
+// -- Config Request Log --
 // Log all request
 app.use(morgan('combined'));
 
+// -- Config CORS --
 // Bật CORS để client có thể truy cập
 app.use(cors());
 
+// -- Config App Route --
 // Route Init
 route(app);
 
