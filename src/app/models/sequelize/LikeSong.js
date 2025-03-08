@@ -21,7 +21,15 @@ const LikeSong = sequelize.define(
     status: {
         type: DataTypes.BIGINT, // 0: like, 1: unlike,
         allowNull: false,
-    }
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
   },
   {
     tableName: "likeSong",

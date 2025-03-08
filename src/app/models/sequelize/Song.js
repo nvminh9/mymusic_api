@@ -33,10 +33,19 @@ const Song = sequelize.define(
         type: DataTypes.STRING(2000),
         allowNull: false,
     },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
   },
   {
     tableName: "song",
     timestamps: true,
+    deletedAt: 'deletedAt',
   }
 );
 

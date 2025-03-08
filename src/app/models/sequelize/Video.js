@@ -17,11 +17,20 @@ const Video = sequelize.define(
     videoLink: {
         type: DataTypes.STRING(2000),
         allowNull: false,
-    }
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
   },
   {
     tableName: "video",
     timestamps: true,
+    deletedAt: true,
   }
 );
 

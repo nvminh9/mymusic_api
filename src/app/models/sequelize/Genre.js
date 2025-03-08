@@ -13,6 +13,14 @@ const Genre = sequelize.define(
             type: DataTypes.STRING(100),
             allowNull: false,
         },
+        createdAt: {
+            type: DataTypes.DATE,
+            defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+        },
     },
     {
         tableName: "genre",

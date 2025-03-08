@@ -1,17 +1,24 @@
 const newsRouter = require('./news');
 const musicRouter = require('./music');
+const userRouter = require('./user');
+const authRouter = require('./auth');
 const cors = require('cors');
 
 function route(app){
 
+    // config cors
     app.use(cors());
 
-    app.use('/news', newsRouter);
+    app.use('/v1/api/auth', authRouter);
 
-    app.use('/music', musicRouter);
+    app.use('/v1/api/news', newsRouter);
+
+    app.use('/v1/api/music', musicRouter);
+
+    app.use('/v1/api/user', userRouter);
     
     app.get('/', (req, res) => {
-        res.send("Hello mymusic!");
+        return res.status(200).json("mymusic API");
     });
 
     // app.get('/:file', (req, res) => {

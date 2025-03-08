@@ -17,7 +17,15 @@ const PlaylistDetail = sequelize.define(
     songId: {
         type: DataTypes.UUID,
         allowNull: false,
-    }
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
   },
   {
     tableName: "playlistDetail",

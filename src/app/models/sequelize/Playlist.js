@@ -25,11 +25,20 @@ const Playlist = sequelize.define(
     type: {
         type: DataTypes.STRING(50),
         allowNull: false,
-    }
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    },
   },
   {
     tableName: "playlist",
     timestamps: true,
+    deletedAt: true,
   }
 );
 

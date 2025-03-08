@@ -1,4 +1,4 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, DATE } = require("sequelize");
 const sequelize = require("../../../config/database");  
 const { v4: uuidv4 } = require("uuid");
 
@@ -22,7 +22,7 @@ const User = sequelize.define(
         type: DataTypes.STRING(500),
     },
     birth: {
-        type: DataTypes.DATE,
+        type: DataTypes.DATEONLY,
     },
     userAvatar: {
         type: DataTypes.STRING(500),
@@ -39,6 +39,14 @@ const User = sequelize.define(
     userCoverImage: {
         type: DataTypes.STRING(500),
     },
+    // createdAt: {
+    //     type: DataTypes.DATE,
+    //     defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    // },
+    // updatedAt: {
+    //     type: DataTypes.DATE,
+    //     defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+    // },
   },
   {
     tableName: "user",
