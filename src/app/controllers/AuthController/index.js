@@ -10,15 +10,33 @@ class AuthController {
     // [POST] /signup
     async handleSignUp(req, res){
         const result = {};
+        const emailRegexp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const passwordRegexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{10,}$/;
         console.log(">>> Check user information: ", req.body);
         // Kiểm tra xem có dữ liệu gửi lên không
         if(req.body){
             const {name, userName, gender, birth, email, password} = req.body;
+            // Kiểm tra xem email có đúng định dạng không
+            const isCorrectEmailFormat = emailRegexp.test(email);
+            // Nếu email không đúng định dạng
+            if(!isCorrectEmailFormat){
+                result.status = "400"
+                result.message = `Email chưa đúng định dạng`;
+                return res.status(400).json(result);
+            }
+            // Kiểm tra xem password có đúng định dạng không
+            const isCorrectPasswordFormat = passwordRegexp.test(password);
+            // Nếu password không đúng định dạng
+            if(!isCorrectPasswordFormat){
+                result.status = "400"
+                result.message = `Password chưa đúng định dạng`;
+                return res.status(400).json(result);
+            }
             const data = await createUserService(name, userName, gender, birth, email, password);
             // Nếu tạo mới người dùng không thành công
             if(data == null){
                 result.status = "500"
-                result.message = `Có lỗi xảy ra trong quá trình tạo người dùng mới`;
+                result.message = `Có lỗi xảy ra trong quá trình tạo người dùng mới, Email hoặc Username đã tồn tại`;
                 return res.status(500).json(result);
             }
             // Nếu tạo mới người dùng thành công

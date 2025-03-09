@@ -1,6 +1,9 @@
+const dotenv = require('dotenv');
+dotenv.config();
 const User = require('../app/models/sequelize/User');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+const jwt = require('jsonwebtoken');
 
 // Tạo mới một người dùng (CREATE)
 const createUserService = async (name, userName, gender, birth, email, password) => {
@@ -36,15 +39,15 @@ const getUserService = async (email) => {
         // Kiểm tra người dùng có tồn tại không
         if(user){
             return {
-                ErrorCode: 200,
-                ErrorMessage: "Tìm thấy người dùng",
-                Data: user
+                status: 200,
+                message: "Tìm thấy người dùng",
+                data: user
             };
         }else {
             return {
-                ErrorCode: 404,
-                ErrorMessage: "Không tìm thấy người dùng",
-                Data: null
+                status: 404,
+                message: "Không tìm thấy người dùng",
+                data: null
             };
         }
     }catch(error){
@@ -77,20 +80,36 @@ const signInUserService = async (email, password) => {
             // Nếu mật khẩu không chính xác
             if(!isMatchPassword){
                 return {
-                    ErrorCode: 401,
-                    ErrorMessage: "Email hoặc mật khẩu chưa chính xác"
+                    status: 401,
+                    message: "Email hoặc mật khẩu chưa chính xác"
                 };
             }else {
                 // Tạo access token ...
+                const payload = {
+                    email: user.email,
+                    name: user.name,
+                };
+                const accessToken = jwt.sign(
+                    payload,
+                    process.env.JWT_SECRET,
+                    {
+                        expiresIn: process.env.JWT_EXPIRE
+                    }
+                )
                 return {
-                    ErrorCode: 200,
-                    ErrorMessage: "Tạo access token thành công"
+                    status: 200,
+                    message: "Đăng nhập thành công",
+                    data: {
+                        accessToken: accessToken,
+                        email: user.email,
+                        name: user.name
+                    }
                 }
             }
         }else {
             return {
-                ErrorCode: 404,
-                ErrorMessage: "Không tìm thấy người dùng"
+                status: 401,
+                message: "Email hoặc mật khẩu chưa chính xác"
             };
         }
     }catch(error){

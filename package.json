@@ -29,6 +29,7 @@
     "express": "^4.21.1",
     "fs": "^0.0.1-security",
     "http": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.5"
