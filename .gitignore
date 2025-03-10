@@ -3,3 +3,8 @@
 
 # node module
 node_modules
+
+# env
+.env
+.env.development
+.env.production
