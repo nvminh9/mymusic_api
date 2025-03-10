@@ -6,6 +6,6 @@ const userController = require('../app/controllers/UserController');
 
 // Khai báo các route
 
-router.use('/', userController.index); // route '/' để ở dưới cùng
+router.get('/', userController.index); // route '/' để ở dưới cùng
 
 module.exports = router;

@@ -1,10 +1,17 @@
-const { createUserService, signInUserService } = require("../../../services/userService");
+const { createUserService, getUserService, signInUserService } = require("../../../services/userService");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+dotenv.config();
 
 class AuthController {
 
     // [GET] /auth
-    index(req, res){
-        return res.status(200).json("User đã đăng nhập bằng ...");
+    async index(req, res){
+        const token = req.headers.authorization.split(' ')[1];
+        // Verify token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const data = await getUserService(decoded.email);
+        return res.status(200).json(data);
     }
 
     // [POST] /signup

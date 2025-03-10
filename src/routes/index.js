@@ -3,10 +3,13 @@ const musicRouter = require('./music');
 const userRouter = require('./user');
 const authRouter = require('./auth');
 const cors = require('cors');
+const auth = require('../app/middleware/auth');
 
 function route(app){
 
     // config cors
+    app.all('*', auth);
+
     app.use(cors());
 
     app.use('/v1/api/auth', authRouter);

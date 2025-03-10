@@ -34,7 +34,10 @@ const getUserService = async (email) => {
         const user = await User.findOne({
             where: {
                 email: email
-            }
+            },
+            attributes: {
+                exclude: ["password"]
+            },
         });
         // Kiểm tra người dùng có tồn tại không
         if(user){
@@ -120,5 +123,6 @@ const signInUserService = async (email, password) => {
 
 module.exports = {
     createUserService,
+    getUserService,
     signInUserService
 }

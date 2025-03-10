@@ -6,6 +6,6 @@ const musicController = require('../app/controllers/MusicController');
 
 // Khai báo các route
 router.get('/:file', musicController.hlsAudioStreaming)
-router.use('/', musicController.index); // route '/' để ở dưới cùng
+router.get('/', musicController.index); // route '/' để ở dưới cùng
 
 module.exports = router;
