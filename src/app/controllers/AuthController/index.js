@@ -1,4 +1,5 @@
-const { createUserService, getUserService, signInUserService } = require("../../../services/userService");
+const { createUserService, getUserService } = require("../../../services/userService");
+const { signInUserService, signOutUserService } = require("../../../services/authService");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
@@ -77,6 +78,21 @@ class AuthController {
             return res.status(200).json(result); 
         }
     }
+
+    // [GET] /signout
+    async handleSignout(req, res){
+        const token = req.headers.authorization.split(' ')[1];
+        const result = await signOutUserService(token);
+        if(result == null){
+            return res.status(200).json({
+                message: "Có lỗi xảy ra trong quá trình đăng xuất hoặc đã đăng xuất trước đó"
+            });
+        }else {
+            return res.status(200).json({
+                message: "Đăng xuất thành công"
+            });
+        }
+    } 
 }
 
 module.exports = new AuthController;

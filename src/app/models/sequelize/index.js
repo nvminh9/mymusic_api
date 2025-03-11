@@ -13,6 +13,7 @@ const PlaylistDetail = require("../sequelize/PlaylistDetail");
 const Follower = require("../sequelize/Follower");
 const LikeArticle = require("../sequelize/LikeArticle");
 const LikeSong = require("../sequelize/LikeSong");
+const Blacklist = require("../sequelize/Blacklist");
 
 // Define association (Thiết lập quan hệ)
 // User
@@ -52,4 +53,5 @@ module.exports = {
     Follower,
     LikeArticle,
     LikeSong,
+    Blacklist,
 };

@@ -8,6 +8,7 @@ const { route } = require('./news');
 // Khai báo các route
 router.post('/signup', authController.handleSignUp); // Đăng ký
 router.post('/signin', authController.handleSignIn); // Đăng nhập
+router.get('/signout', authController.handleSignout); // Đăng xuất
 router.get('/', authController.index); // route '/' để ở dưới cùng
 
 module.exports = router;
