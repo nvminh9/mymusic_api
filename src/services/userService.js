@@ -1,6 +1,7 @@
 const dotenv = require('dotenv');
 dotenv.config();
 const User = require('../app/models/sequelize/User');
+const Follower = require('../app/models/sequelize/Follower');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -64,7 +65,51 @@ const getUserService = async (email) => {
 // Xóa người dùng (DELETE)
 // ...
 
+// Lấy ra số người theo dõi (Người theo dõi)
+const getUserFollowerTotal = async (userId) => {
+    // Lấy ra số lượng người dùng theo dõi 
+    try {
+        const follower = await Follower.findAndCountAll({
+            where: {
+                userId: userId,
+            }
+        });
+        // Kiểm tra
+        if(follower){
+            return follower;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
+
+// Lấy ra số người dùng đang theo dõi (Đang theo dõi)
+const getUserFollowTotal = async (userId) => {
+    // Lấy ra số lượng người dùng đang theo dõi
+    try {
+        const follow = await Follower.findAndCountAll({
+            where: {
+                followerId: userId,
+            }
+        });
+        // Kiểm tra
+        if(follow){
+            return follow;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
+
 module.exports = {
     createUserService,
-    getUserService
+    getUserService,
+    getUserFollowerTotal,
+    getUserFollowTotal
 }

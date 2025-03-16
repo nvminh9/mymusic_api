@@ -6,7 +6,7 @@ const Blacklist = require("../models/sequelize/Blacklist");
 
 const auth = async (req, res, next) => {
     // Các route không cần xác thực
-    const allow_routes = ["/","/auth/signup","/auth/signin"]; 
+    const allow_routes = ["/","/auth/signup","/auth/signin","/music/swimmingpool_master.m3u8"]; // Tạm thời ko cần auth cho route music/:file
     // Kiểm tra xem request có phải route không cần xác thực không
     if(allow_routes.find(item => '/v1/api' + item === req.baseUrl + req.path)){
         next();

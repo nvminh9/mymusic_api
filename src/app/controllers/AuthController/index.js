@@ -43,13 +43,13 @@ class AuthController {
             const data = await createUserService(name, userName, gender, birth, email, password);
             // Nếu tạo mới người dùng không thành công
             if(data == null){
-                result.status = "500"
-                result.message = `Có lỗi xảy ra trong quá trình tạo người dùng mới, Email hoặc Username đã tồn tại`;
-                return res.status(500).json(result);
+                result.status = "409"
+                result.message = `Email hoặc tên người dùng đã tồn tại`;
+                return res.status(409).json(result);
             }
             // Nếu tạo mới người dùng thành công
             result.status = "200"
-            result.message = `Tạo người dùng mới với thông tin sau: ${email}, ${name}, ${userName}`;
+            result.message = `Đăng ký thành công`;
             result.data = data;
             return res.status(200).json(result); 
         }else{

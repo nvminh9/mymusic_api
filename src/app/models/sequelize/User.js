@@ -17,6 +17,7 @@ const User = sequelize.define(
     userName: {
         type: DataTypes.STRING(500),
         allowNull: false,
+        unique: true,
     },
     gender: {
         type: DataTypes.STRING(500),
@@ -38,6 +39,9 @@ const User = sequelize.define(
     },
     userCoverImage: {
         type: DataTypes.STRING(500),
+    },
+    description: {
+        type: DataTypes.STRING(1000),
     },
     // createdAt: {
     //     type: DataTypes.DATE,

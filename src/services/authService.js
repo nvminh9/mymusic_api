@@ -42,13 +42,14 @@ const signInUserService = async (email, password) => {
                         expiresIn: process.env.JWT_EXPIRE
                     }
                 )
+                // Bỏ password trước khi trả về user info
+                user.password = "";
                 return {
                     status: 200,
                     message: "Đăng nhập thành công",
                     data: {
                         accessToken: accessToken,
-                        email: user.email,
-                        name: user.name
+                        user: user,
                     }
                 }
             }

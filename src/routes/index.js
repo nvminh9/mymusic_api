@@ -2,6 +2,7 @@ const newsRouter = require('./news');
 const musicRouter = require('./music');
 const userRouter = require('./user');
 const authRouter = require('./auth');
+const articleRouter = require('./article');
 const cors = require('cors');
 const auth = require('../app/middleware/auth');
 
@@ -12,14 +13,16 @@ function route(app){
 
     app.use(cors());
 
-    app.use('/v1/api/auth', authRouter);
+    app.use('/v1/api/auth', authRouter); // Authentication
 
-    app.use('/v1/api/news', newsRouter);
-
-    app.use('/v1/api/music', musicRouter);
-
-    app.use('/v1/api/user', userRouter);
+    app.use('/v1/api/user', userRouter); // Người dùng
     
+    app.use('v1/api/article', articleRouter); // Bài viết
+    
+    app.use('/v1/api/music', musicRouter); // Nhạc
+    
+    app.use('/v1/api/news', newsRouter); // Tin tức
+
     app.get('/', (req, res) => {
         return res.status(200).json("mymusic API");
     });
