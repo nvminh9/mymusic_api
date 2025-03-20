@@ -20,7 +20,7 @@ const User = sequelize.define(
         unique: true,
     },
     gender: {
-        type: DataTypes.STRING(500),
+        type: DataTypes.STRING(500), // male, female, other
     },
     birth: {
         type: DataTypes.DATEONLY,

@@ -2,6 +2,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 const User = require('../app/models/sequelize/User');
 const Article = require('../app/models/sequelize/Article');
+const { Photo, LikeArticle, Comment } = require('../app/models/sequelize');
 
 // Tạo mới một bài viết (CREATE)
 const createArticleService = async () => {
@@ -54,17 +55,33 @@ const getArticleService = async () => {
 // ...
 
 // Lấy ra số bài viết của người dùng (theo userId)
-const getUserArticleTotal = async (userId) => {
+const getUserArticleTotal = async (userName) => {
+    const result = {};
     try {
+        // Tìm user với userName
+        const user = await User.findOne({
+            where: {
+                userName: userName
+            },
+            // attributes: {
+                
+            // }
+        });
+        // Kiểm tra user
+        // ...
+        const userId = user.userId;
         // Tìm các bài viết của user theo userId
         const articles = await Article.findAndCountAll({
             where: {
                 userId: userId,
-            }
+            },
+            include: [Photo, LikeArticle, Comment],
         });
         // Kiểm tra
         if(articles){
-            return articles;
+            result.articles = articles;
+            result.user = user;
+            return result;
         }else{
             return null;
         }

@@ -8,9 +8,10 @@ const auth = require('../app/middleware/auth');
 
 function route(app){
 
-    // config cors
+    // middleware
     app.all('*', auth);
-
+    
+    // config cors
     app.use(cors());
 
     app.use('/v1/api/auth', authRouter); // Authentication

@@ -19,7 +19,7 @@ const Article = sequelize.define(
       type: DataTypes.STRING(1500),
     },
     privacy: {
-      type: DataTypes.BIGINT, // 0: public, 2: private
+      type: DataTypes.BIGINT, // 0: public, 1: private
       allowNull: false,
     },
     createdAt: {

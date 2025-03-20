@@ -14,9 +14,17 @@ const Follower = sequelize.define(
         type: DataTypes.UUID,
         allowNull: false,
     },
+    follower: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
+    },
     userId: {
         type: DataTypes.UUID,
         allowNull: false,
+    },
+    userName: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
     },
     status: {
         type: DataTypes.BIGINT, // 0: follow, 1: unfollow

@@ -5,6 +5,7 @@ const route = require('./routes');
 const cors = require('cors');
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -31,6 +32,9 @@ app.use(cors());
 // -- Config req.body --
 app.use(express.json()); // for json
 app.use(express.urlencoded({ extended: true })); // for form data
+
+// config static file
+app.use(express.static(path.join(__dirname, 'assets'))); // Không cần Auth
 
 // -- Config App Route --
 // Route Init

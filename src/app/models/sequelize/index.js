@@ -27,6 +27,7 @@ User.hasMany(LikeSong, { foreignKey: "userId" });
 // Article
 Article.belongsTo(User, { foreignKey: "userId" });
 Article.hasMany(Comment, { foreignKey: "articleId" });
+Article.hasMany(LikeArticle, { foreignKey: "articleId" });
 Article.hasMany(Video, { foreignKey: "articleId" });
 Article.hasMany(Photo, { foreignKey: "articleId" });
 // Comment

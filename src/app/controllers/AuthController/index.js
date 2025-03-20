@@ -28,7 +28,7 @@ class AuthController {
             const isCorrectEmailFormat = emailRegexp.test(email);
             // Nếu email không đúng định dạng
             if(!isCorrectEmailFormat){
-                result.status = "400"
+                result.status = 400
                 result.message = `Email chưa đúng định dạng`;
                 return res.status(400).json(result);
             }
@@ -36,24 +36,24 @@ class AuthController {
             const isCorrectPasswordFormat = passwordRegexp.test(password);
             // Nếu password không đúng định dạng
             if(!isCorrectPasswordFormat){
-                result.status = "400"
+                result.status = 400
                 result.message = `Password chưa đúng định dạng`;
                 return res.status(400).json(result);
             }
             const data = await createUserService(name, userName, gender, birth, email, password);
             // Nếu tạo mới người dùng không thành công
             if(data == null){
-                result.status = "409"
+                result.status = 409
                 result.message = `Email hoặc tên người dùng đã tồn tại`;
                 return res.status(409).json(result);
             }
             // Nếu tạo mới người dùng thành công
-            result.status = "200"
+            result.status = 200
             result.message = `Đăng ký thành công`;
             result.data = data;
             return res.status(200).json(result); 
         }else{
-            result.status = "200"
+            result.status = 200
             result.message = `Người dùng chưa nhập thông tin đăng ký`;
             return res.status(200).json(result); 
         }
@@ -68,12 +68,12 @@ class AuthController {
             const {email, password} = req.body;
             const data = await signInUserService(email, password);
             // Nếu đăng nhập thành công
-            // result.status = "200"
+            // result.status = 200
             // result.message = `Đăng nhập thành công`;
             // result.data = data;
             return res.status(200).json(data);
         }else {
-            result.status = "200"
+            result.status = 200
             result.message = `Người dùng chưa nhập thông tin đăng nhập`;
             return res.status(200).json(result); 
         }

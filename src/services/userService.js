@@ -60,18 +60,48 @@ const getUserService = async (email) => {
 };
 
 // Cập nhật thông tin người dùng (UPDATE)
-// ...
+// updateData = { description, gender, userAvatar }
+const updateUserService = async (userName, updateData) => {
+    try {
+        // Thực hiện update
+        const updated = await User.update(
+            updateData,
+            {
+                where: {
+                    userName
+                }
+            }
+        );
+        // Kiểm tra updated
+        if(updated){
+            const updatedUser = await User.findOne({
+                where: {
+                    userName
+                },
+                attributes: {
+                    exclude: ["password"]
+                }
+            });
+            return updatedUser;
+        }else{
+            return null;
+        }
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
 
 // Xóa người dùng (DELETE)
 // ...
 
 // Lấy ra số người theo dõi (Người theo dõi)
-const getUserFollowerTotal = async (userId) => {
+const getUserFollowerTotalService = async (userName) => {
     // Lấy ra số lượng người dùng theo dõi 
     try {
         const follower = await Follower.findAndCountAll({
             where: {
-                userId: userId,
+                userName: userName,
             }
         });
         // Kiểm tra
@@ -87,12 +117,12 @@ const getUserFollowerTotal = async (userId) => {
 };
 
 // Lấy ra số người dùng đang theo dõi (Đang theo dõi)
-const getUserFollowTotal = async (userId) => {
+const getUserFollowTotalService = async (userName) => {
     // Lấy ra số lượng người dùng đang theo dõi
     try {
         const follow = await Follower.findAndCountAll({
             where: {
-                followerId: userId,
+                follower: userName,
             }
         });
         // Kiểm tra
@@ -110,6 +140,7 @@ const getUserFollowTotal = async (userId) => {
 module.exports = {
     createUserService,
     getUserService,
-    getUserFollowerTotal,
-    getUserFollowTotal
+    getUserFollowerTotalService,
+    getUserFollowTotalService,
+    updateUserService
 }

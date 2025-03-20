@@ -1,6 +1,7 @@
 const dotenv = require('dotenv');
 dotenv.config();
 const Song = require('../app/models/sequelize/Song');
+const User = require('../app/models/sequelize/User')
 
 // Tạo mới một bài nhạc (CREATE)
 const createSongService = async () => {
@@ -51,7 +52,28 @@ const getSongService = async () => {
 // Xóa bài nhạc (DELETE)
 // ...
 
+// Lấy ra danh sách bài nhạc của người dùng (theo userId)
+const getUserSongs = async (userName) => {
+    try {
+        // Tìm user với userName (bao gồm theo các Song của User)
+        const user = await User.findOne({
+            where: {
+                userName: userName
+            },
+            include: [Song]
+        });
+        if(user){
+            return user;
+        }else{
+            return null;
+        }
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+}
+
 
 module.exports = {
-    
+    getUserSongs
 }
