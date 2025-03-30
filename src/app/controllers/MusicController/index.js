@@ -7,7 +7,7 @@ class MusicController{
         res.send('Music Controller [Index]');
     }
 
-    // route for serve HLS Streaming Audio
+    // route for serve HLS Streaming Audio (TEST)
     // [GET] /music/:file
     hlsAudioStreaming(req, res){
         console.log("request starting...");

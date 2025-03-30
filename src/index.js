@@ -13,6 +13,7 @@ dotenv.config();
 const { sequelize, User } = require('./app/models/sequelize');
 // Sync (Đồng bộ lại database)
 (async () => {
+    // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
     // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
     await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
     console.log("✅ Database đã được đồng bộ!");

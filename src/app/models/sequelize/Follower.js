@@ -27,7 +27,7 @@ const Follower = sequelize.define(
       allowNull: false,
     },
     status: {
-        type: DataTypes.BIGINT, // 0: follow, 1: unfollow
+        type: DataTypes.BIGINT, // 0: followed, 1: unfollow
         allowNull: false,
     },
     createdAt: {

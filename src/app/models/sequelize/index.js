@@ -39,6 +39,8 @@ Song.belongsTo(Genre, { foreignKey: "genreId" });
 // Playlist
 Playlist.belongsTo(User, { foreignKey: "userId" });
 Playlist.hasMany(PlaylistDetail, { foreignKey: "playlistId" });
+// Follower
+Follower.belongsTo(User, { foreignKey: "followerId" });
 
 module.exports = {
     sequelize,

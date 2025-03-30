@@ -34,6 +34,8 @@ const signInUserService = async (email, password) => {
                 const payload = {
                     email: user.email,
                     name: user.name,
+                    userName: user.userName,
+                    id: user.userId,
                 };
                 const accessToken = jwt.sign(
                     payload,
