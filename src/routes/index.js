@@ -18,7 +18,7 @@ function route(app){
 
     app.use('/v1/api/user', userRouter); // Người dùng
     
-    app.use('v1/api/article', articleRouter); // Bài viết
+    app.use('/v1/api/article', articleRouter); // Bài viết
     
     app.use('/v1/api/music', musicRouter); // Nhạc
     

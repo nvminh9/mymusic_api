@@ -18,6 +18,9 @@ const Photo = sequelize.define(
         type: DataTypes.STRING(2000),
         allowNull: false,
     },
+    order: {
+        type: DataTypes.INTEGER, // Thứ tự hiển thị trong bài viết
+    },
     createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại

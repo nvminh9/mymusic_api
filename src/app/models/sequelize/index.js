@@ -22,6 +22,7 @@ User.hasMany(Comment, { foreignKey: "userId" });
 User.hasMany(Song, { foreignKey: "userId" });
 User.hasMany(Playlist, { foreignKey: "userId" });
 User.hasMany(Follower, { foreignKey: "userId" });
+User.hasMany(Follower, { foreignKey: "followerId" });
 User.hasMany(LikeArticle, { foreignKey: "userId" });
 User.hasMany(LikeSong, { foreignKey: "userId" });
 // Article
@@ -40,7 +41,8 @@ Song.belongsTo(Genre, { foreignKey: "genreId" });
 Playlist.belongsTo(User, { foreignKey: "userId" });
 Playlist.hasMany(PlaylistDetail, { foreignKey: "playlistId" });
 // Follower
-Follower.belongsTo(User, { foreignKey: "followerId" });
+Follower.belongsTo(User, { foreignKey: "followerId", as: "followerUser" }); // Người theo dõi
+Follower.belongsTo(User, { foreignKey: "userId", as: "followingUser" }) // Đang theo dõi
 
 module.exports = {
     sequelize,

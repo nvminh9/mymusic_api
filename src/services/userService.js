@@ -1,7 +1,7 @@
 const dotenv = require('dotenv');
 dotenv.config();
-const User = require('../app/models/sequelize/User');
-const Follower = require('../app/models/sequelize/Follower');
+const { User } = require('../app/models/sequelize');
+const { Follower } = require('../app/models/sequelize');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
@@ -96,6 +96,7 @@ const updateUserService = async (userName, updateData) => {
 // ...
 
 // Lấy ra số người theo dõi (Người theo dõi)
+// tham số followerId là id của người dùng đang đăng nhập
 const getUserFollowerTotalService = async (userName, followerId) => {
     // Chứa kết quả cuối cùng
     const result = {};
@@ -117,7 +118,15 @@ const getUserFollowerTotalService = async (userName, followerId) => {
                 userId: userId,
                 status: 0
             },
-            include: User
+            include: [
+                {
+                    model: User,
+                    as: "followerUser",
+                    attributes: {
+                        exclude: ["password"]
+                    },
+                },
+            ],
         });
         // Lấy danh sách người dùng mà auth user đã theo dõi (status = 0)
         const followingList = await Follower.findAll({
@@ -149,18 +158,57 @@ const getUserFollowerTotalService = async (userName, followerId) => {
 };
 
 // Lấy ra số người dùng đang theo dõi (Đang theo dõi)
-const getUserFollowTotalService = async (userName) => {
+// tham số followerId là id của user đang đăng nhập
+const getUserFollowTotalService = async (userName, followerId) => {
+    const result = {};
     // Lấy ra số lượng người dùng đang theo dõi
     try {
-        const follow = await Follower.findAndCountAll({
+        // Kiểm tra người dùng có tồn tại
+        const user = await User.findOne({
             where: {
-                follower: userName,
-                status: 0
+                userName: userName
+            },
+            attributes: {
+                exclude: ["name","userName","gender","birth","userAvatar","email","password","userCoverImage","description","createdAt","updatedAt"]
             }
         });
+        const userId = user.userId;
+        // Lấy danh sách người đang theo dõi (tìm theo id của user để có thể include User)
+        const follow = await Follower.findAndCountAll({
+            where: {
+                followerId: userId,
+                status: 0
+            },
+            include: [
+                {
+                    model: User,
+                    as: "followingUser",
+                    attributes: {
+                        exclude: ["password"]
+                    },
+                },
+            ],
+        });
+        // Lấy danh sách người dùng mà auth user đã theo dõi (status = 0)
+        const followingList = await Follower.findAll({
+            where: {
+                followerId: followerId,
+                status: 0
+            },
+            attributes: ["userId"],
+        });
+        // Chuyển followingList thành array (mảng ID của user đã theo dõi)
+        const followingIdsArray = followingList.map((item) => item.userId);
+        // gán lại follower.count cho result.count
+        result.count = follow.count;
+        // map (thêm thuộc tính followStatus vào mỗi object trong mảng follow.rows)
+        result.rows = follow.rows.map((item) => ({
+            ...item.toJSON(),
+            followStatus: followingIdsArray.includes(item.userId),
+        }));
         // Kiểm tra
-        if(follow){
-            return follow;
+        if(result){
+            return result;
         } else {
             return null;
         }

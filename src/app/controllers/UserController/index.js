@@ -67,7 +67,7 @@ class UserController{
         // Số lượng người theo dõi
         const follower = await getUserFollowerTotalService(userName, followerId);
         // Số lượng đang theo dõi
-        const follow = await getUserFollowTotalService(userName);
+        const follow = await getUserFollowTotalService(userName, followerId);
         // Số lượng bài viết
         const articlesAndUser = await getUserArticleTotal(userName); // Chưa Clean (sẽ chỉnh lại)
         if(follower && follow && articlesAndUser){
@@ -124,9 +124,13 @@ class UserController{
     async getFollows(req, res){
         const result = {};
         const { userName } = req.params;
+        const token = req.headers.authorization.split(' ')[1];
+        // lấy dữ liệu của auth user
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const followerId = decoded.id;
         try {
             // Danh sách đang theo dõi
-            const follows = await getUserFollowTotalService(userName);
+            const follows = await getUserFollowTotalService(userName, followerId);
             // Kiểm tra
             if(follows !== null){
                 result.status = 200;
