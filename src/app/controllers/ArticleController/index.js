@@ -16,58 +16,49 @@ class ArticleController {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const userId = decoded.id;
             
-            // Kiểm tra file upload
-            // Photo files
-            console.log("photoFiles");
-            console.log(req.files["photoFiles"]); // array
-            let photos = [];
-            if(req.files["photoFiles"]){
-                for(let i = 0; i < req.files["photoFiles"].length; i++){
-                    photos[i] = req.files["photoFiles"][i].filename;
-                };
-            } else {
-                photos[0] = null;
-            }
-            // Video files
-            console.log("videoFiles");
-            console.log(req.files["videoFiles"]); // array
-            let videos = [];
-            if(req.files["videoFiles"]){
-                for(let i = 0; i < req.files["videoFiles"].length; i++){
-                    videos[i] = req.files["videoFiles"][i].filename;
-                };
-            } else {
-                videos[0] = null;
-            }
-
             // Dữ liệu bài viết
             let articleData = { textContent, privacy };
             articleData.userId = userId;
-            // Dữ liệu hình ảnh của bài viết
+            // Dữ liệu files hình ảnh và video
+            // Kiểm tra file upload
+            // Media Files (array object chứa cả image và video)
+            // console.log("mediaFiles");
+            // console.log(req.files["mediaFiles"]);
+            let photos = [];
+            let videos = [];
             let articleImageData = [];
-            if(photos[0] !== null){
-                for(let i = 0; i < photos.length; i++){
-                    articleImageData[i] = {
-                        photoLink: `/image/${photos[i]}`
-                    }
-                }
-            } else {
-                articleImageData[0] = null;
-            }
-            // Dữ liệu video của bài viết
             let articleVideoData = [];
-            if(videos[0] !== null){
-                for(let i = 0; i < videos.length; i++){
-                    articleVideoData[i] = {
-                        videoLink: `/video/${videos[i]}`
-                    }
+            if(req.files["mediaFiles"]){
+                for(let i = 0; i < req.files["mediaFiles"].length; i++){
+                    const file = req.files["mediaFiles"][i];
+                    const isImage = file.mimetype.startsWith("image/");
+                    if(isImage){
+                        photos[i] = {
+                            photoLink: `/image/${file.filename}`,
+                            order: i
+                        };
+                    } else {
+                        videos[i] = {
+                            videoLink: `/video/${file.filename}`,
+                            order: i
+                        };
+                    }  
                 }
             } else {
-                articleVideoData[0] = null;
+                photos[0] = null;
+                videos[0] = null;
             }
 
+            console.log("photos")
+            console.log(photos);
+
+            console.log("videos")
+            console.log(videos);
+
             // Dùng Service Create Article
-            const article = await createArticleService(articleData, articleImageData, articleVideoData);
+            // const article = await createArticleService(articleData, articleImageData, articleVideoData);
+
+            let article;
 
             // Kiểm tra
             if(article){

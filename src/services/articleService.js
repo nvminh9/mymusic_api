@@ -4,8 +4,8 @@ const { User, Article, Photo, Video, LikeArticle, Comment } = require('../app/mo
 
 // Tạo mới một bài viết (CREATE)
 // articleData là object chứa dữ liệu tạo bài viết
-// articleImageData là array chứa các object có thuộc tính photoLink (chứa link của Hình)
-// articleVideoData là array chứa các object có thuộc tính videoLink (chứa link của Video)
+// articleImageData là array chứa các object có thuộc tính photoLink (chứa link của Hình, order)
+// articleVideoData là array chứa các object có thuộc tính videoLink (chứa link của Video, order)
 const createArticleService = async (articleData, articleImageData, articleVideoData) => {
     try {
         // Tạo bài viết (với textContent)
@@ -26,6 +26,7 @@ const createArticleService = async (articleData, articleImageData, articleVideoD
                         {
                             articleId: article.articleId,
                             photoLink: articleImageData[i].photoLink,
+                            order: articleImageData[i].order,
                         }
                     );
                     // Nếu tạo trong DB có lỗi thì sẽ gán thành object rỗng
@@ -52,6 +53,7 @@ const createArticleService = async (articleData, articleImageData, articleVideoD
                         {
                             articleId: article.articleId,
                             videoLink: articleVideoData[i].videoLink,
+                            order: articleVideoData[i].order,
                         }
                     );
                     // Nếu tạo trong DB có lỗi thì sẽ gán thành object rỗng
@@ -139,22 +141,22 @@ const getUserArticleTotal = async (userName) => {
             where: {
                 userId: userId,
             },
-            include: [Photo, LikeArticle, Comment],
+            order: [["createdAt","DESC"]],
+            include: [Photo, Video, LikeArticle, Comment],
         });
         // Tạo thuộc tính mediaContent chứa hình ảnh và video có thứ tự theo cột order
-        // console.log("articles: ", articles[0].dataValues);
         // Kiểm tra
         if(articles){
             articles.forEach((article) => {
                 const photos = article.dataValues.Photos.map((photo) => ({...photo.dataValues, type: "photo"}));
-                // const videos = article.dataValues.Videos.map((video) => ({...video, type: "video"}));
-                // const videos = article.Videos.map(video => video.videoLink);
+                const videos = article.dataValues.Videos.map((video) => ({...video.dataValues, type: "video"}));
                 const mediaContent = [
-                    ...photos
-                    // ...videos
+                    ...photos,
+                    ...videos
                 ];
                 mediaContent.sort((a, b) => a.order - b.order);
                 delete article.dataValues.Photos;
+                delete article.dataValues.Videos;
                 article.dataValues.mediaContent = mediaContent;
             });
             result.articles = articles;
