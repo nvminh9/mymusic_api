@@ -21,6 +21,10 @@ const createArticleService = async (articleData, articleImageData, articleVideoD
             if(articleImageData[0] !== null){
                 let photos = [];
                 for(let i = 0; i < articleImageData.length; i++){
+                    // Kiểm tra
+                    if(!articleImageData[i]){
+                        continue;   
+                    }
                     // Tạo trong DB
                     photos[i] = await Photo.create(
                         {
@@ -48,6 +52,10 @@ const createArticleService = async (articleData, articleImageData, articleVideoD
             if(articleVideoData[0] !== null){
                 let videos = [];
                 for(let i = 0; i < articleVideoData.length; i++){
+                    // Kiểm tra
+                    if(!articleVideoData[i]){
+                        continue;
+                    }
                     // Tạo trong DB
                     videos[i] = await Video.create(
                         {

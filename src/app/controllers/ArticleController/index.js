@@ -22,10 +22,6 @@ class ArticleController {
             // Dữ liệu files hình ảnh và video
             // Kiểm tra file upload
             // Media Files (array object chứa cả image và video)
-            // console.log("mediaFiles");
-            // console.log(req.files["mediaFiles"]);
-            let photos = [];
-            let videos = [];
             let articleImageData = [];
             let articleVideoData = [];
             if(req.files["mediaFiles"]){
@@ -33,32 +29,31 @@ class ArticleController {
                     const file = req.files["mediaFiles"][i];
                     const isImage = file.mimetype.startsWith("image/");
                     if(isImage){
-                        photos[i] = {
+                        articleImageData[i] = {
                             photoLink: `/image/${file.filename}`,
                             order: i
                         };
                     } else {
-                        videos[i] = {
+                        articleVideoData[i] = {
                             videoLink: `/video/${file.filename}`,
                             order: i
                         };
                     }  
                 }
             } else {
-                photos[0] = null;
-                videos[0] = null;
+                articleImageData[0] = null;
+                articleVideoData[0] = null;
             }
 
-            console.log("photos")
-            console.log(photos);
+            // console.log("articleImageData")
+            // console.log(articleImageData);
+            // console.log(articleImageData[0]);
 
-            console.log("videos")
-            console.log(videos);
+            // console.log("articleVideoData")
+            // console.log(articleVideoData);
 
             // Dùng Service Create Article
-            // const article = await createArticleService(articleData, articleImageData, articleVideoData);
-
-            let article;
+            const article = await createArticleService(articleData, articleImageData, articleVideoData);
 
             // Kiểm tra
             if(article){
