@@ -21,6 +21,7 @@ const LikeArticle = sequelize.define(
     status: {
         type: DataTypes.BIGINT, // 0: like, 1: unlike,
         allowNull: false,
+        defaultValue: 0, // Nếu record mới được tạo thì mặc định là hành động thích (status 0)
     },
     createdAt: {
         type: DataTypes.DATE,

@@ -127,6 +127,7 @@ const getUserFollowerTotalService = async (userName, followerId) => {
                     },
                 },
             ],
+            order: [["createdAt","DESC"]], // Sắp theo ngày tạo mới nhất
         });
         // Lấy danh sách người dùng mà auth user đã theo dõi (status = 0)
         const followingList = await Follower.findAll({
@@ -188,6 +189,7 @@ const getUserFollowTotalService = async (userName, followerId) => {
                     },
                 },
             ],
+            order: [["createdAt","DESC"]], // Sắp theo ngày tạo mới nhất
         });
         // Lấy danh sách người dùng mà auth user đã theo dõi (status = 0)
         const followingList = await Follower.findAll({

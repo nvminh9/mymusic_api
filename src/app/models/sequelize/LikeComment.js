@@ -1,36 +1,27 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../../../config/database");
 const { v4: uuidv4 } = require("uuid");
-const Article = require("./Article");
-const User = require("./User");
 
-const Comment = sequelize.define(
-  "Comment",
+const LikeComment = sequelize.define(
+  "LikeComment",
   {
-    commentId: {
+    likeCommentId: {
         type: DataTypes.UUID,
         defaultValue: uuidv4,
         primaryKey: true,
     },
-    articleId: {
-        type: DataTypes.UUID,
+    commentId: {
+        type: DataTypes.UUID, 
         allowNull: false,
     },
     userId: {
         type: DataTypes.UUID,
         allowNull: false,
     },
-    parentCommentId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-    },
-    respondedCommentId: {
-        type: DataTypes.UUID,
-        allowNull: true,
-    },
-    content: {
-        type: DataTypes.STRING(500),
+    status: {
+        type: DataTypes.BIGINT, // 0: like, 1: unlike,
         allowNull: false,
+        defaultValue: 0, // Nếu record mới được tạo thì mặc định là hành động thích (status 0)
     },
     createdAt: {
         type: DataTypes.DATE,
@@ -42,13 +33,9 @@ const Comment = sequelize.define(
     },
   },
   {
-    tableName: "comment",
+    tableName: "likeComment",
     timestamps: true,
   }
 );
 
-// Thiết lập quan hệ (Đã khai báo quan hệ ở index.js)
-// Comment.belongsTo(Article, { foreignKey: "articleId" });
-// Comment.belongsTo(User, { foreignKey: "userId" });
-
-module.exports = Comment;
+module.exports = LikeComment;

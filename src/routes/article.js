@@ -6,10 +6,10 @@ const articleController = require('../app/controllers/ArticleController');
 
 // Khai báo các route
 router.post('/create', upload.fields([
-    // { name: 'photoFiles' },
-    // { name: 'videoFiles' }
     { name: 'mediaFiles' }
 ]), articleController.createArticle) // Đăng bài viết
-router.get('/', articleController.index); // route '/' để ở dưới cùng
+router.post('/:articleId/like', articleController.createLikeArticle); // Thích bài viết
+router.patch('/:articleId/unlike', articleController.unLikeArticle); // Hủy thích bài viết
+router.get('/:articleId', articleController.index); // Chi tiết bài viết (route '/' để ở dưới cùng)
 
 module.exports = router;

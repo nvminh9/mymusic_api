@@ -21,7 +21,7 @@ class UserController{
 
     // Cập nhật thông tin user
     // [PATCH] /user/profile/:userName
-    async updateUserInfo(req, res){
+    async updateUserInfo(req, res){ // Cần cập nhật lại không lấy userName từ params mà lấy từ token để đảm bảo tính bảo mật
         const { userName } = req.params;
         const { description, gender } = req.body;
         const result = {};
@@ -60,16 +60,16 @@ class UserController{
         const token = req.headers.authorization.split(' ')[1];
         // lấy dữ liệu của auth user
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const followerUserName = decoded.userName;
-        const followerId = decoded.id;
+        const followerUserName = decoded.userName; // userName của auth user
+        const followerId = decoded.id; // userId của auth user
         // Kiểm tra auth user đã theo dõi user chưa 
         const followStatus = await getFollow(followerUserName, userName);
-        // Số lượng người theo dõi
+        // Dữ liệu người theo dõi
         const follower = await getUserFollowerTotalService(userName, followerId);
-        // Số lượng đang theo dõi
+        // Dữ liệu đang theo dõi
         const follow = await getUserFollowTotalService(userName, followerId);
-        // Số lượng bài viết
-        const articlesAndUser = await getUserArticleTotal(userName); // Chưa Clean (sẽ chỉnh lại)
+        // Dữ liệu bài viết
+        const articlesAndUser = await getUserArticleTotal(userName, followerId); // Chưa Clean (sẽ chỉnh lại)
         if(follower && follow && articlesAndUser){
             result.status = 200;
             result.message = "Thông tin profile";
