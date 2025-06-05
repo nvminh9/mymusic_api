@@ -238,10 +238,49 @@ const deleteCommentService = async (commentId, authUserId) => {
     }
 }
 
+// Thực hiện cập nhật bình luận
+const updateCommentService = async (commentId, authUserId, data) => {
+    try {
+        // Tìm bình luận theo commentId
+        const comment = await Comment.findByPk(commentId);
+        // Kiểm tra tồn tại bình luận không
+        if(!comment){
+            return {
+                status: 404,
+                message: 'Không tìm thấy bình luận',
+                data: null
+            };
+        }
+        // Kiểm tra quyền cập nhật bình luận
+        if(comment.userId !== authUserId){
+            return {
+                status: 403,
+                message: 'Bạn không có quyền chỉnh sửa bình luận này',
+                data: null
+            }
+        }
+
+        // Cập nhật bình luận
+        const updatedComment = await comment.update(data);
+        
+        // Kết quả cuối
+        return {
+            status: 200,
+            message: 'Chỉnh sửa bình luận thành công',
+            data: updatedComment
+        };
+
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+}
+
 module.exports = {
     createCommentService,
     getCommentService,
     createLikeCommentService,
     unLikeCommentService,
-    deleteCommentService
+    deleteCommentService,
+    updateCommentService
 }

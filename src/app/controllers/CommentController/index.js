@@ -1,7 +1,7 @@
 const dotenv = require("dotenv");
 dotenv.config();
 const jwt = require("jsonwebtoken");
-const { createCommentService, getCommentService, createLikeCommentService, unLikeCommentService, deleteCommentService } = require("../../../services/commentService");
+const { createCommentService, getCommentService, createLikeCommentService, unLikeCommentService, deleteCommentService, updateCommentService } = require("../../../services/commentService");
 
 class CommentController {
 
@@ -200,9 +200,50 @@ class CommentController {
     //     }
     // };
 
-    // [PUT] / (update)
+    // [PATCH] /:commentId (Cập nhật bình luận)
+    async updateComment(req, res){
+        const result = {};
+        const { commentId } = req.params;
+        const { content } = req.body; 
+        try {
+            // Token
+            const token = req.headers.authorization.split(' ')[1];
+            // Lấy dữ liệu của auth user
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
 
-    // [DELETE] / (delete)
+            // Kiểm tra nội dung bình luận
+            const trimContent = content.trim(); // Xóa khoảng trắng đầu và cuối chuỗi
+            if(trimContent === undefined || trimContent === null || trimContent === ''){
+                result.status = 200;
+                result.message = 'Nội dung bình luận không được để trống';
+                result.data = null;
+                return res.status(200).json(result);
+            }
+
+            // Service cập nhật bình luận
+            const data = { content };
+            const updatedComment = await updateCommentService(commentId, userId, data);
+            // Kiểm tra (nếu null, có lỗi ở Service)
+            if(updatedComment === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            }
+
+            // Kết quả
+            result.status = updatedComment?.status ? updatedComment?.status : 200;
+            result.message = updatedComment?.message ? updatedComment?.message : 'No messages';
+            result.data = updatedComment?.data ? updatedComment?.data : null;
+            return res.status(updatedComment?.status ? updatedComment?.status : 200).json(result); 
+        } catch (error) {
+            console.log(">>> ❌ Error: ", error);
+            return null;
+        }
+    }
+
+    // [DELETE] /:commentId (Xóa bình luận)
     async deleteComment(req, res){        
         try {
             const result = {};
