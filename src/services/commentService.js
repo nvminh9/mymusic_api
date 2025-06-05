@@ -200,9 +200,48 @@ const unLikeCommentService = async (commentId, userId) => {
     }
 };
 
+// Thực hiện xóa bình luận
+const deleteCommentService = async (commentId, authUserId) => {
+    try {
+        // Tìm bình luận theo commentId
+        const comment = await Comment.findByPk(commentId);
+        // Kiểm tra tồn tại bình luận không
+        if(!comment){
+            return {
+                status: 404,
+                message: 'Không tìm thấy bình luận',
+                data: null
+            };
+        }
+        // Kiểm tra quyền xóa bình luận
+        if(comment.userId !== authUserId){
+            return {
+                status: 403,
+                message: 'Bạn không có quyền xóa bình luận này',
+                data: null
+            }
+        }
+
+        // Xóa bình luận
+        // Sẽ tự động xóa các bình luận con nếu đã thiết lập cascade trong quan hệ
+        const deletedComment = await comment.destroy(); 
+
+        // Kết quả cuối
+        return {
+            status: 200,
+            message: 'Xóa bình luận thành công',
+            data: deletedComment
+        };
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+}
+
 module.exports = {
     createCommentService,
     getCommentService,
     createLikeCommentService,
-    unLikeCommentService
+    unLikeCommentService,
+    deleteCommentService
 }

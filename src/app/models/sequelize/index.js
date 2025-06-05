@@ -35,6 +35,20 @@ Article.hasMany(Photo, { foreignKey: "articleId" });
 // Comment
 Comment.belongsTo(Article, { foreignKey: "articleId" });
 Comment.belongsTo(User, { foreignKey: "userId" });
+Comment.hasMany(LikeComment, { foreignKey: "commentId" }); // Gồm status thích và không thích
+// Tự động xóa các bình luận con khi bình luận cha bị xóa
+Comment.hasMany(Comment, {
+    as: "replies",
+    foreignKey: "parentCommentId",
+    onDelete: "CASCADE",
+    hooks: true, // Tự động xóa các bình luận con
+});
+Comment.belongsTo(Comment, {
+    as: "parent",
+    foreignKey: "parentCommentId",
+    onDelete: "CASCADE",
+});
+// Comment.hasMany(Comment, { foreignKey: "respondedCommentId", as: "repliesToComment" }); // Bình luận trả lời
 // Song
 Song.belongsTo(User, { foreignKey: "userId" });
 Song.belongsTo(Genre, { foreignKey: "genreId" });

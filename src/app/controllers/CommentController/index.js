@@ -1,7 +1,7 @@
 const dotenv = require("dotenv");
 dotenv.config();
 const jwt = require("jsonwebtoken");
-const { createCommentService, getCommentService, createLikeCommentService, unLikeCommentService } = require("../../../services/commentService");
+const { createCommentService, getCommentService, createLikeCommentService, unLikeCommentService, deleteCommentService } = require("../../../services/commentService");
 
 class CommentController {
 
@@ -202,8 +202,38 @@ class CommentController {
 
     // [PUT] / (update)
 
-    // [PATCH] / (delete)
-s
+    // [DELETE] / (delete)
+    async deleteComment(req, res){        
+        try {
+            const result = {};
+            const { commentId } = req.params;
+
+            // Token
+            const token = req.headers.authorization.split(' ')[1];
+            // Lấy dữ liệu của auth user
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            // Service xóa bình luận
+            const deletedComment = await deleteCommentService(commentId, userId);
+            // Kiểm tra
+            if(deletedComment === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            }
+
+            // Kết quả
+            result.status = deletedComment?.status ? deletedComment?.status : 200;
+            result.message = deletedComment?.message ? deletedComment?.message : 'No messages';
+            result.data = deletedComment?.data ? deletedComment?.data : null;
+            return res.status(deletedComment?.status ? deletedComment?.status : 200).json(result); 
+        } catch (error) {
+            console.log(">>> ❌ Error: ", error);
+            return null;
+        }
+    }
 }
 
 module.exports = new CommentController;
