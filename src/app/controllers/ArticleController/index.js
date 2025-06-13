@@ -1,4 +1,4 @@
-const { createArticleService, getArticleService, getArticleComments, getArticleCommentsService, createLikeArticleService, unLikeArticleService, getArticleLikesService } = require("../../../services/articleService");
+const { createArticleService, getArticleService, getArticleComments, getArticleCommentsService, createLikeArticleService, unLikeArticleService, getArticleLikesService, deleteArticleService } = require("../../../services/articleService");
 const dotenv = require("dotenv");
 dotenv.config();
 const jwt = require("jsonwebtoken");
@@ -129,6 +129,39 @@ class ArticleController {
                 result.data = null;
                 return res.status(200).json(result);
             }
+        } catch (error) {
+            console.log(">>> ❌ Error: ", error);
+            return null;
+        }
+    };
+
+    // [DELETE] /:articleId (Xóa bài viết)
+    async deleteArticle(req, res){
+        try {
+            const result = {};
+            const { articleId } = req.params;
+
+            // Token
+            const token = req.headers.authorization.split(' ')[1];
+            // Lấy dữ liệu của auth user
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+            
+            // Service xóa bài viết
+            const deletedArticle = await deleteArticleService(articleId, userId);
+            // Kiểm tra
+            if(deletedArticle === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            }
+
+            // Kết quả
+            result.status = deletedArticle?.status ? deletedArticle?.status : 200;
+            result.message = deletedArticle?.message ? deletedArticle?.message : 'No messages';
+            result.data = deletedArticle?.data ? deletedArticle?.data : null;
+            return res.status(deletedArticle?.status ? deletedArticle?.status : 200).json(result); 
         } catch (error) {
             console.log(">>> ❌ Error: ", error);
             return null;

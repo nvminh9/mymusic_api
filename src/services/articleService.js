@@ -2,6 +2,8 @@ const dotenv = require('dotenv');
 dotenv.config();
 const { User, Article, Photo, Video, LikeArticle, Comment, LikeComment } = require('../app/models/sequelize');
 const e = require('express');
+const fs = require('fs').promises;
+const path = require('path');
 
 // Tạo mới một bài viết (CREATE)
 // articleData là object chứa dữ liệu tạo bài viết
@@ -118,55 +120,76 @@ const getArticleService = async (articleId, authUserId) => {
     }
 };
 
+// Hàm chuyển các comment con vào replies của comment cha tương ứng
+// return Map chứa comment trong mỗi comment có replies cũng là Map
+function attachChildComments(roots) {
+    let commentMap = {};
+    //
+    Object.values(roots).forEach((comment) => {
+        // Kiểm tra xem comment này có comment cha không (check if this comment has parent)
+        if(comment.parentCommentId !== null){
+            // Parent Comment Object
+            const parentComment = roots[comment.parentCommentId];
+            // Kiểm tra
+            if(parentComment){
+                // repliesMap[comment.commentId] = comment;
+                parentComment.replies[comment.commentId] = comment;
+            }
+        } else {
+            commentMap[comment.commentId] = comment;
+        }
+    });
+    //
+    return commentMap;
+};
 // Hàm thu thập các commentId (đệ quy) 
 // (dùng trong hàm getArticleCommentsService cho phần Lượt thích của bình luận)
 function collectCommentIds(comments, commentIds) {
-    comments.forEach(comment => {
+    Object.values(comments).forEach(comment => {
         if (comment.commentId) {
             commentIds.add(comment.commentId);
         }
-        if (comment.replies && comment.replies.length > 0) {
+        if (comment.replies && Object.keys(comment.replies).length > 0) {
             collectCommentIds(comment.replies, commentIds);
         }
     });
 }
 // Hàm gán likeComment tương ứng với commentId vào các bình luận trong roots (đệ quy) 
 // (dùng trong hàm getArticleCommentsService cho phần lượt thích của bình luận)
-function attachLikeComments(comments, likeCommentMap, authUserLikeCommentMap) {
-  return comments.map((comment) => {
-    if (comment.commentId) {
-      comment.likes = likeCommentMap[comment.commentId] || [];
-      comment.likeCount = likeCommentMap[comment.commentId] ? likeCommentMap[comment.commentId].length : 0;
-      comment.likeStatus = authUserLikeCommentMap[comment.commentId] ? true : false;
-    }
-    if (comment.replies && comment.replies.length > 0) {
-      comment.replies = attachLikeComments(comment.replies, likeCommentMap, authUserLikeCommentMap);
-    }
-    return comment;
-  });
+function attachLikeComments(roots, likeCommentMap, authUserLikeCommentMap) {
+    Object.values(roots).forEach((comment) => {
+        comment.likes = likeCommentMap[comment.commentId] || {};
+        comment.likeCount = likeCommentMap[comment.commentId] ? Object.keys(likeCommentMap[comment.commentId]).length : 0;
+        comment.likeStatus = authUserLikeCommentMap[comment.commentId] ? true : false;
+        if(comment.replies && Object.keys(comment.replies).length > 0){
+            comment.replies = attachLikeComments(comment.replies, likeCommentMap, authUserLikeCommentMap);
+        }
+        return comment;
+    });
 }
 // Hàm thu thập các respondedCommentId (đệ quy) (dùng trong hàm getArticleCommentsService)
 function collectRespondedIds(comments, respondedIds) {
-    comments.forEach(comment => {
+    Object.values(comments).forEach(comment => {
         if (comment.respondedCommentId) {
             respondedIds.add(comment.respondedCommentId);
         }
-        if (comment.replies && comment.replies.length > 0) {
+        if (comment.replies && Object.keys(comment.replies).length > 0) {
             collectRespondedIds(comment.replies, respondedIds);
         }
     });
 }
 // Hàm gán respondedComment tương ứng với respondedCommentId vào các bình luận trong roots (đệ quy) (dùng trong hàm getArticleCommentsService)
-function attachRespondedComments(comments, respondedMap) {
-  return comments.map((comment) => {
-    if (comment.respondedCommentId) {
-      comment.respondedComment = respondedMap[comment.respondedCommentId] || null;
-    }
-    if (comment.replies && comment.replies.length > 0) {
-      comment.replies = attachRespondedComments(comment.replies, respondedMap);
-    }
-    return comment;
-  });
+function attachRespondedComments(roots, respondedMap) {
+    Object.values(roots).forEach((comment) => {
+        // check respondedCommentId
+        if(comment.respondedCommentId){
+            comment.respondedComment = respondedMap[comment.respondedCommentId] || null;
+        }
+        if(comment.replies && Object.keys(comment.replies).length > 0){
+            comment.replies = attachRespondedComments(comment.replies, respondedMap)
+        }
+        return comment;
+    });
 }
 // Lấy các bình luận của bài viết (Bao gồm data từ User, Comment)
 const getArticleCommentsService = async (articleId, authUserId) => {
@@ -200,41 +223,21 @@ const getArticleCommentsService = async (articleId, authUserId) => {
             // order: [['createdAt', 'DESC']] // Sắp xếp theo ngày tạo mới nhất
             order: [['createdAt', 'ASC']] // Sắp xếp theo ngày tạo cũ nhất
         });
-        // console.log(articleComments.length)
 
-        // ** XÂY DỰNG CẤU TRÚC CÂY BÌNH LUẬN **
-        // Xây dựng cây bình luận (chứa các bình luận, mỗi bình luận có thể chứa các bình luận khác)
-        const commentMap = {};
-        const roots = [];
-        // Tạo Comment Map (theo dạng commentId: comment Object)
-        // comment Object sẽ được thêm replies = [] để chứa các bình luận phản hồi (nếu có)
+        // ** XÂY DỰNG MAP BÌNH LUẬN **
+        // Tạo roots (type Map, chứa tất cả comment, cả cha và con)
+        const roots = {};
+        // Mỗi comment sẽ được thêm replies là {} để chứa các bình luận phản hồi
         articleComments.forEach((comment) => {
             const plainComment = comment.get({ plain: true }); // Chuyển đổi thành object bình luận
             // Thêm replies
-            plainComment.replies = [];
-            // Thêm vào commentMap (dạng commentId => comment)
-            commentMap[plainComment.commentId] = plainComment;
+            plainComment.replies = {};
+            // Thêm vào roots map (dạng commentId => comment)
+            roots[plainComment.commentId] = plainComment;
         });
-        // Thêm các comment con vào comment cha của nó (nếu có)
-        Object.values(commentMap).forEach((comment) => {
-            // Kiểm tra xem comment này có comment cha không (check if this comment has parent)
-            if(comment.parentCommentId !== null){
-                // Parent Comment Object
-                const parentComment = commentMap[comment.parentCommentId];
-                // Kiểm tra
-                if(parentComment){
-                    parentComment.replies.push(comment);
-                }
-            } else {
-                roots.push(comment);
-            }
-        });
-
-        // Sắp xếp roots theo thời gian mới nhất trước (giảm dần theo createdAt)
-        // roots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         // ** PHẦN XỬ LÝ LẤY THÔNG TIN CỦA BÌNH LUẬN ĐƯỢC TRẢ LỜI (respondedComment) **
-        // Thêm các respondedComment tương ứng với respondedCommentId của mỗi bình luận
+        // Thêm respondedComment tương ứng với respondedCommentId của mỗi bình luận
         const respondedIds = new Set(); // Set chứa các respondedCommentId
         const respondedMap = {};
         // Lấy ra các respondedCommentId    
@@ -283,22 +286,33 @@ const getArticleCommentsService = async (articleId, authUserId) => {
                 status: 0
             }
         });
-        // Tạo likeCommentMap (dạng commentId -> [LikeComment])
+        // Khởi tạo likeCommentMap (dạng commentId -> Map LikeComment)
         commentLikes.forEach((commentLike) => {
+            let likesMap = {};
+            //
             if(!likeCommentMap[commentLike.commentId]){
-                likeCommentMap[commentLike.commentId] = [commentLike];
+                likesMap[commentLike.likeCommentId] = commentLike;
+                likeCommentMap[commentLike.commentId] = likesMap;
             } else {
-                likeCommentMap[commentLike.commentId] = [...likeCommentMap[commentLike.commentId], commentLike];
+                likesMap[commentLike.likeCommentId] = commentLike;
+                likeCommentMap[commentLike.commentId] = {...likeCommentMap[commentLike.commentId], ...likesMap};
             }
         });
-        // Tạo authUserLikeCommentMap (dạng commentId -> LikeComment)
+        // Khởi tạo authUserLikeCommentMap (dạng commentId -> LikeComment)
         authUserLikes.forEach((authUserLike) => {
             authUserLikeCommentMap[authUserLike.commentId] = authUserLike;
         });
-        // Gán likes (chứa các LikeComment), likeCount, likeStatus vào các comment trong roots
+        // Gán likes, likeCount, likeStatus vào các comment trong roots
         attachLikeComments(roots, likeCommentMap, authUserLikeCommentMap);
 
-        result.comments = roots;
+        // Chuyển các comment con vào replies của comment cha tương ứng
+        const commentMap = attachChildComments(roots);
+
+        // Sắp xếp roots theo thời gian mới nhất trước (giảm dần theo createdAt)
+        // roots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        // Kết quả
+        result.comments = commentMap;
         result.commentCount = articleComments.length;
 
         return result;
@@ -559,13 +573,86 @@ const getArticleLikesService = async (articleId, authUserId) => {
     }
 };
 
-// Lấy các lượt thích của bài viết (Bao gồm data từ User, LikeArticle)
+// Thực hiện lấy các lượt thích của bài viết (Bao gồm data từ User, LikeArticle)
 
-// Cập nhật thông tin người dùng (UPDATE)
-// ...
+// Hàm thực hiện xóa file media
+const deleteFile = async (fileRelativePath) => {
+  try {
+    const filePath = path.join(__dirname, fileRelativePath);
+    await fs.unlink(filePath);
+    // if (fs.existsSync(filePath)) {
+    //     fs.unlinkSync(filePath);
+    // }
+  } catch (err) {
+    console.error('Xoá file thất bại:', err);
+  }
+};
+// Thực hiện xóa bài viết
+const deleteArticleService = async (articleId, authUserId) => {
+    try {
+        const result = {};
 
-// Xóa người dùng (DELETE)
-// ...
+        // Tìm bài viết theo articleId
+        const article = await Article.findOne({
+            where: {
+                articleId: articleId,
+            },
+            include: [User, Photo, Video]
+        });
+
+        // Kiểm tra tồn tại bài viết không
+        if(!article){
+            return {
+                status: 404,
+                message: 'Không tìm thấy bài viết',
+                data: null
+            };
+        }
+        // Kiểm tra quyền xóa bài viết
+        if(article.userId !== authUserId){
+            return {
+                status: 403,
+                message: 'Bạn không có quyền xóa bài viết này',
+                data: null
+            }
+        }
+
+        // Xóa bài viết
+        // Sẽ tự động xóa các dữ liệu có quan hệ (Comment, LikeArticle, Video, Photo)
+        // const deletedArticle = await article.destroy({ paranoid: true }); 
+        const deletedArticle = await article.destroy(); 
+
+        // Xóa file media của bài viết đã lưu trong assets
+        // mediaContent (các hình, video của bài viết)
+        const photos = article.dataValues.Photos.map((photo) => ({...photo.dataValues, type: "photo"}));
+        const videos = article.dataValues.Videos.map((video) => ({...video.dataValues, type: "video"}));
+        const mediaContent = [
+            ...photos,
+            ...videos
+        ];
+        mediaContent.sort((a, b) => a.order - b.order);
+        // Thực hiện xóa các file media trong array mediaContent
+        for(let i = 0; i < mediaContent.length; i++){
+            if(mediaContent[i].type === "photo"){
+                // Nếu là file hình
+                deleteFile(`../assets${mediaContent[i].photoLink}`);
+            } else if(mediaContent[i].type === "video") {
+                // Nếu là file video
+                deleteFile(`../assets${mediaContent[i].videoLink}`);
+            }
+        }
+
+        // Kết quả cuối
+        return {
+            status: 200,
+            message: 'Xóa bài viết thành công',
+            data: deletedArticle
+        };
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
 
 // Lấy ra số bài viết của người dùng (theo userId)
 const getUserArticleTotal = async (userName, authUserId) => {
@@ -632,5 +719,6 @@ module.exports = {
     getArticleCommentsService,
     createLikeArticleService,
     unLikeArticleService,
-    getArticleLikesService
+    getArticleLikesService,
+    deleteArticleService
 }
