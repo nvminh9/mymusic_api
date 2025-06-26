@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
 dotenv.config();
-const { User, Article, Photo, Video, LikeArticle, Comment, LikeComment } = require('../app/models/sequelize');
+const { User, Article, Photo, Video, LikeArticle, Comment, LikeComment, SharedArticle } = require('../app/models/sequelize');
 const e = require('express');
 const fs = require('fs').promises;
 const path = require('path');
@@ -100,7 +100,7 @@ const getArticleService = async (articleId, authUserId) => {
             where: {
                 articleId: articleId,
             },
-            include: [User, Photo, Video]
+            include: [{ model: User, attributes: { exclude: ['password'] } }, { model: Photo}, { model: Video}]
         });
         // Kiểm tra
         if(article){
@@ -108,11 +108,52 @@ const getArticleService = async (articleId, authUserId) => {
             // Nếu privacy chỉ mình tôi và người truy cập ko phải auth user thì trả về null
             // console.log(article.userId);
             if(article.privacy + '' === '1' && authUserId !== article.userId){
-                return null;
+                return {
+                    status: 200,
+                    message: 'Không tìm thấy bài viết',
+                    data: null
+                };
             }
-            return article;
+            
+            // THÊM CÁC BÌNH LUẬN VÀ LƯỢT THÍCH TƯƠNG ỨNG VÀO BÀI VIẾT
+            // Dùng service getArticleCommentsService (Lấy các bình luận của bài viết đó, bao gồm data model từ Comment)
+            // Theo cấu trúc cây (chứa các Object Comment, mỗi Object Comment có replies là mảng chứa Object Comment con (nếu có))
+            const articleComments = await getArticleCommentsService(articleId, authUserId);
+            // Dùng service getArticleLikesService (Lấy các lượt thích của bài viết đó, bao gồm data từ model LikeArticle)
+            const articleLikes = await getArticleLikesService(articleId, authUserId);
+
+            // Reformat data
+            // mediaContent
+            const photos = article.dataValues.Photos.map((photo) => ({...photo.dataValues, type: "photo"}));
+            const videos = article.dataValues.Videos.map((video) => ({...video.dataValues, type: "video"}));
+            const mediaContent = [
+                ...photos,
+                ...videos
+            ];
+            mediaContent.sort((a, b) => a.order - b.order);
+            article.dataValues.mediaContent = mediaContent;
+            delete article.dataValues.Photos;
+            delete article.dataValues.Videos;
+            // comments
+            article.dataValues.comments = articleComments.comments;
+            article.dataValues.commentCount = articleComments.commentCount;
+            // likes
+            article.dataValues.likes = articleLikes.likes;
+            article.dataValues.likeCount = articleLikes.likeCount;
+            article.dataValues.likeStatus = articleLikes.likeStatus;
+
+            // Kết quả
+            return {
+                status: 200,
+                message: 'Nội dung chi tiết của bài viết',
+                data: article
+            };
         } else {
-            return null;
+            return {
+                status: 200,
+                message: 'Không tìm thấy bài viết',
+                data: null
+            };
         }
     }catch(error){
         console.log(">>> ❌ Error: ", error);
@@ -663,9 +704,7 @@ const getUserArticleTotal = async (userName, authUserId) => {
             where: {
                 userName: userName
             },
-            // attributes: {
-                
-            // }
+            attributes: { exclude: ['password'] }
         });
         // Kiểm tra user
         const userId = user.userId;
@@ -675,7 +714,8 @@ const getUserArticleTotal = async (userName, authUserId) => {
         } else {
             privacy = [0]; // nếu không phải auth user thì chỉ xem được công khai
         }
-        // Tìm các bài viết của user theo userId
+
+        // Tìm các BÀI VIẾT của user (theo userId)
         // Dùng findAndCountAll sẽ bị lỗi ở thuộc tính count trả về, do count sẽ đếm cả các include
         const articles = await Article.findAll({
             where: {
@@ -683,29 +723,161 @@ const getUserArticleTotal = async (userName, authUserId) => {
                 privacy: privacy,
             },
             order: [["createdAt","DESC"]],
-            include: [Photo, Video, LikeArticle, Comment],
         });
-        // Tạo thuộc tính mediaContent chứa hình ảnh và video có thứ tự theo cột order
-        // Kiểm tra
-        if(articles){
-            articles.forEach((article) => {
-                const photos = article.dataValues.Photos.map((photo) => ({...photo.dataValues, type: "photo"}));
-                const videos = article.dataValues.Videos.map((video) => ({...video.dataValues, type: "video"}));
-                const mediaContent = [
-                    ...photos,
-                    ...videos
-                ];
-                mediaContent.sort((a, b) => a.order - b.order);
-                delete article.dataValues.Photos;
-                delete article.dataValues.Videos;
-                article.dataValues.mediaContent = mediaContent;
-            });
-            result.articles = articles;
-            result.user = user;
-            return result;
-        }else{
-            return null;
+
+        // Tìm các BÀI CHIA SẺ của user (theo userId)
+        const sharedArticles = await SharedArticle.findAll({
+            where: {
+                userId: userId,
+                privacy: privacy,
+            },
+            order: [["createdAt","DESC"]],
+        });
+
+        // Mảng articleIds lưu id, loại, createdAt của mỗi bài viết
+        const articleIds = [];
+        articles.map((article) => {
+            articleIds.push(
+                {
+                    articleId: article.dataValues.articleId,
+                    articleType: 'article',
+                    createdAt: article.dataValues.createdAt,
+                }
+            );
+        });
+        sharedArticles.map((sharedArticle) => {
+            articleIds.push(
+                {
+                    sharedArticleId: sharedArticle.dataValues.sharedArticleId,
+                    articleType: 'sharedArticle',
+                    createdAt: sharedArticle.dataValues.createdAt,
+                }
+            );
+        });
+
+        // Sắp xếp lại array articleIds theo createdAt mới nhất
+        // roots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        articleIds.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // articleArray lưu data của các article lấy được
+        const articleArray = await Promise.all(
+            articleIds.map(async (articleData) => {
+                if(articleData.articleType === 'article'){
+                    const article = await getArticleService(articleData.articleId, authUserId);
+                    return article ? article.data.dataValues : null;
+                } else if (articleData.articleType === 'sharedArticle') {
+                    const sharedArticle = await getSharedArticleService(articleData.sharedArticleId, authUserId);
+                    return sharedArticle ? sharedArticle.data.dataValues : null;
+                }
+            })
+        );        
+
+        // Kết quả
+        result.articles = articleArray.filter(Boolean);
+        result.user = user;
+        return result;
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
+
+// Thực hiện chia sẻ bài viết
+const shareArticleService = async (articleData) => {
+    try {
+        // Tìm xem người dùng đã chia sẻ bài viết này trước đó chưa
+        const sharedArticle = await SharedArticle.findOne(
+            {
+                where: {
+                    userId: articleData?.userId,
+                    articleId: articleData?.articleId,
+                },
+            }
+        );
+
+        // Nếu đã chia sẻ trước đó rồi
+        if(sharedArticle){
+            return {
+                status: 200,
+                message: 'Đã chia sẻ bài viết trước đó',
+                data: sharedArticle
+            };
         }
+
+        // Tạo bài chia sẻ
+        const createSharedArticle = await SharedArticle.create(
+            articleData
+        );
+
+        // Kiểm tra
+        // Nếu tạo record chia sẻ thành công
+        if(createSharedArticle){
+            return {
+                status: 200,
+                message: 'Chia sẻ bài viết thành công',
+                data: createSharedArticle
+            };
+        } else {
+            return {
+                status: 200,
+                message: 'Chia sẻ bài viết không thành công',
+                data: null
+            };
+        }
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
+
+// Thực hiện lấy thông tin bài chia sẻ 
+const getSharedArticleService = async (sharedArticleId, authUserId) => {
+    try {
+        // Tìm bài chia sẻ
+        const sharedArticle = await SharedArticle.findOne({
+            where: {
+                sharedArticleId: sharedArticleId,
+            },
+            // include: [{ model: User, attributes: { exclude: ['password'] } }, { model: Photo}, { model: Video}]
+            include: [{ model: User, attributes: { exclude: ['password'] } }]
+        });
+
+        // Kiểm tra
+        if(sharedArticle){
+            // Kiểm tra các bài viết có privacy chỉ mình tôi (privacy 1)
+            // Nếu privacy chỉ mình tôi và người truy cập ko phải auth user thì trả về null
+            if(sharedArticle.privacy + '' === '1' && authUserId !== sharedArticle.userId){
+                return {
+                    status: 200,
+                    message: 'Không tìm thấy bài chia sẻ',
+                    data: null
+                };
+            }
+
+            // Lấy dữ liệu của bài viết được chia sẻ
+            const article = await getArticleService(sharedArticle.articleId, authUserId);
+            // Kiểm tra article
+            if(article === null){
+                sharedArticle.dataValues.Article = null;
+            } else {
+                sharedArticle.dataValues.Article = article?.data ? article?.data : null;
+            }
+
+            // Kết quả
+            return {
+                status: 200,
+                message: 'Nội dung bài chia sẻ',
+                data: sharedArticle
+            };
+        } else {
+            // Nếu không tìm thấy bài chia sẻ
+            return {
+                status: 200,
+                message: 'Không tìm thấy bài chia sẻ',
+                data: sharedArticle
+            };
+        }
+
     } catch (error) {
         console.log(">>> ❌ Error: ", error);
         return null;
@@ -720,5 +892,7 @@ module.exports = {
     createLikeArticleService,
     unLikeArticleService,
     getArticleLikesService,
-    deleteArticleService
+    deleteArticleService,
+    shareArticleService,
+    getSharedArticleService
 }

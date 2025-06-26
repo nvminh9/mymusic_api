@@ -3,7 +3,9 @@ const musicRouter = require('./music');
 const userRouter = require('./user');
 const authRouter = require('./auth');
 const articleRouter = require('./article');
+const sharedArticleRouter = require('./sharedArticle');
 const commentRouter = require('./comment');
+const commentSharedArticleRouter = require('./commentSharedArticle');
 const cors = require('cors');
 const auth = require('../app/middleware/auth');
 
@@ -26,6 +28,10 @@ function route(app){
     app.use('/v1/api/news', newsRouter); // Tin tức
 
     app.use('/v1/api/comment', commentRouter); // Comment
+
+    app.use('/v1/api/sharedArticle', sharedArticleRouter); // Shared Article
+
+    app.use('/v1/api/commentSharedArticle', commentSharedArticleRouter); // Comment Shared Article
 
     app.get('/', (req, res) => {
         return res.status(200).json("mymusic API");

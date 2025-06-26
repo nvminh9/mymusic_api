@@ -15,6 +15,10 @@ const LikeArticle = require("../sequelize/LikeArticle");
 const LikeSong = require("../sequelize/LikeSong");
 const LikeComment = require("../sequelize/LikeComment");
 const Blacklist = require("../sequelize/Blacklist");
+const SharedArticle = require("../sequelize/SharedArticle");
+const LikeSharedArticle = require("../sequelize/LikeSharedArticle");
+const CommentSharedArticle = require("../sequelize/CommentSharedArticle");
+const LikeCommentSharedArticle = require("../sequelize/LikeCommentSharedArticle");
 
 // Define association (Thiết lập quan hệ)
 // User
@@ -49,6 +53,29 @@ Comment.belongsTo(Comment, {
     onDelete: "CASCADE",
 });
 // Comment.hasMany(Comment, { foreignKey: "respondedCommentId", as: "repliesToComment" }); // Bình luận trả lời
+// Shared Article
+SharedArticle.belongsTo(User, { foreignKey: "userId" });
+SharedArticle.hasMany(Comment, { foreignKey: "articleId" });
+SharedArticle.hasMany(LikeSharedArticle, { foreignKey: "sharedArticleId" });
+// SharedArticle.hasMany(Video, { foreignKey: "articleId" });
+// SharedArticle.hasMany(Photo, { foreignKey: "articleId" });
+// Shared Article Comment
+CommentSharedArticle.belongsTo(SharedArticle, { foreignKey: "sharedArticleId" });
+CommentSharedArticle.belongsTo(User, { foreignKey: "userId" });
+CommentSharedArticle.hasMany(LikeCommentSharedArticle, { foreignKey: "commentId" }); // Gồm status thích và không thích
+// Tự động xóa các bình luận con khi bình luận cha bị xóa
+CommentSharedArticle.hasMany(CommentSharedArticle, {
+    as: "replies",
+    foreignKey: "parentCommentId",
+    onDelete: "CASCADE",
+    hooks: true, // Tự động xóa các bình luận con
+});
+CommentSharedArticle.belongsTo(CommentSharedArticle, {
+    as: "parent",
+    foreignKey: "parentCommentId",
+    onDelete: "CASCADE",
+});
+// Comment.hasMany(Comment, { foreignKey: "respondedCommentId", as: "repliesToComment" }); // Bình luận trả lời
 // Song
 Song.belongsTo(User, { foreignKey: "userId" });
 Song.belongsTo(Genre, { foreignKey: "genreId" });
@@ -75,4 +102,8 @@ module.exports = {
     LikeSong,
     LikeComment,
     Blacklist,
+    SharedArticle,
+    LikeSharedArticle,
+    CommentSharedArticle,
+    LikeCommentSharedArticle,
 };

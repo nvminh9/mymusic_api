@@ -11,6 +11,8 @@ router.post('/create', upload.fields([
 router.delete('/:articleId', articleController.deleteArticle); // Xóa bài viết
 router.post('/:articleId/like', articleController.createLikeArticle); // Thích bài viết
 router.patch('/:articleId/unlike', articleController.unLikeArticle); // Hủy thích bài viết
-router.get('/:articleId', articleController.index); // Chi tiết bài viết (route '/' để ở dưới cùng)
+router.post('/:articleId/share', articleController.shareArticle); // Chia sẻ bài viết
+router.get('/:articleId', articleController.index); // Chi tiết bài viết 
+// router.get('/', articleController.index); // (route '/' để ở dưới cùng)
 
 module.exports = router;

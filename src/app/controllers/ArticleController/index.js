@@ -1,4 +1,4 @@
-const { createArticleService, getArticleService, getArticleComments, getArticleCommentsService, createLikeArticleService, unLikeArticleService, getArticleLikesService, deleteArticleService } = require("../../../services/articleService");
+const { createArticleService, getArticleService, getArticleComments, getArticleCommentsService, createLikeArticleService, unLikeArticleService, getArticleLikesService, deleteArticleService, shareArticleService, getSharedArticleService } = require("../../../services/articleService");
 const dotenv = require("dotenv");
 dotenv.config();
 const jwt = require("jsonwebtoken");
@@ -89,46 +89,20 @@ class ArticleController {
         try {
             // Dùng service getArticle (Lấy nội dung của bài viết bao gồm data từ model Article, Photo, Video)
             const article = await getArticleService(articleId, userId);
-            // Dùng service getArticleCommentsService (Lấy các bình luận của bài viết đó, bao gồm data model từ Comment)
-            // Theo cấu trúc cây (chứa các Object Comment, mỗi Object Comment có replies là mảng chứa Object Comment con (nếu có))
-            const articleComments = await getArticleCommentsService(articleId, userId);
-            // Dùng service getArticleLikesService (Lấy các lượt thích của bài viết đó, bao gồm data từ model LikeArticle)
-            // ...
-            const articleLikes = await getArticleLikesService(articleId, userId);
-
-            // Reformat data
-            // mediaContent
-            const photos = article.dataValues.Photos.map((photo) => ({...photo.dataValues, type: "photo"}));
-            const videos = article.dataValues.Videos.map((video) => ({...video.dataValues, type: "video"}));
-            const mediaContent = [
-                ...photos,
-                ...videos
-            ];
-            mediaContent.sort((a, b) => a.order - b.order);
-            article.dataValues.mediaContent = mediaContent;
-            delete article.dataValues.Photos;
-            delete article.dataValues.Videos;
-            // comments
-            article.dataValues.comments = articleComments.comments;
-            article.dataValues.commentCount = articleComments.commentCount;
-            // likes
-            // ...
-            article.dataValues.likes = articleLikes.likes;
-            article.dataValues.likeCount = articleLikes.likeCount;
-            article.dataValues.likeStatus = articleLikes.likeStatus;
 
             // Kiểm tra
-            if(article){
-                result.status = '200';
-                result.message = 'Dữ liệu của bài viết';
-                result.data = article;
-                return res.status(200).json(result);
-            } else {
-                result.status = '200';
-                result.message = 'Không tìm thấy bài viết';
+            if(article === null){
+                result.status = 500;
+                result.message = 'Internal error';
                 result.data = null;
-                return res.status(200).json(result);
+                return res.status(500).json(result); 
             }
+
+            // Kết quả
+            result.status = article?.status ? article?.status : 200;
+            result.message = article?.message ? article?.message : 'No messages';
+            result.data = article?.data ? article?.data : null;
+            return res.status(article?.status ? article?.status : 200).json(result); 
         } catch (error) {
             console.log(">>> ❌ Error: ", error);
             return null;
@@ -229,6 +203,76 @@ class ArticleController {
             result.message = unlikeArticle?.message ? unlikeArticle?.message : '';
             result.data = unlikeArticle?.data ? unlikeArticle?.data : null;
             return res.status(200).json(result); 
+        } catch (error) {
+            console.log(">>> ❌ Error: ", error);
+            return null;
+        }
+    };
+
+    // [POST] /:articleId/share (Chia sẻ bài viết)
+    async shareArticle(req, res) {
+        try {
+            const result = {};
+            const { articleId } = req.params;
+            const { sharedTextContent, privacy } = req.body;
+            
+            // Token
+            const token = req.headers.authorization.split(' ')[1];
+            // Lấy dữ liệu của auth user
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+
+            // Service chia sẻ bài viết
+            const articleData = { userId, articleId, sharedTextContent, privacy };
+            const sharedArticle = await shareArticleService(articleData);
+
+            // Kiểm tra
+            if(sharedArticle === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            }
+
+            // Kết quả
+            result.status = sharedArticle?.status ? sharedArticle?.status : 200;
+            result.message = sharedArticle?.message ? sharedArticle?.message : 'No messages';
+            result.data = sharedArticle?.data ? sharedArticle?.data : null;
+            return res.status(sharedArticle?.status ? sharedArticle?.status : 200).json(result); 
+        } catch (error) {
+            console.log(">>> ❌ Error: ", error);
+            return null;
+        }
+    };
+
+    // [GET] /shared/:sharedArticleId (Chi tiết bài chia sẻ)
+    async getSharedArticle(req, res) {
+        try {
+            const result = {};
+            const { sharedArticleId } = req.params;
+
+            // Token
+            const token = req.headers.authorization.split(' ')[1];
+            // Lấy dữ liệu của auth user
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const userId = decoded.id;
+
+            // Service lấy dữ liệu bài chia sẻ
+            const sharedArticle = await getSharedArticleService(sharedArticleId, userId);
+
+            // Kiểm tra            
+            if(sharedArticle === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            }
+
+            // Kết quả
+            result.status = sharedArticle?.status ? sharedArticle?.status : 200;
+            result.message = sharedArticle?.message ? sharedArticle?.message : 'No messages';
+            result.data = sharedArticle?.data ? sharedArticle?.data : null;
+            return res.status(sharedArticle?.status ? sharedArticle?.status : 200).json(result); 
         } catch (error) {
             console.log(">>> ❌ Error: ", error);
             return null;

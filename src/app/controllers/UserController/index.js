@@ -70,7 +70,8 @@ class UserController{
         const follow = await getUserFollowTotalService(userName, followerId);
         // Dữ liệu bài viết
         const articlesAndUser = await getUserArticleTotal(userName, followerId); // Chưa Clean (sẽ chỉnh lại)
-        if(follower && follow && articlesAndUser){
+        // follower && follow && articlesAndUser // old state
+        if(articlesAndUser){
             result.status = 200;
             result.message = "Thông tin profile";
             result.data = {
