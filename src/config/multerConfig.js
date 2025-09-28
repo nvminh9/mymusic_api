@@ -28,9 +28,40 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Bộ lọc chỉ cho phép file âm thanh
-const soundFileFilter = (req, file, cb) => {
-    // ...
+// Cấu hình lưu file và tên file (music, image, video file)
+const storageMusicFile = multer.diskStorage({
+    destination: (req, file, cb) => {
+        let uploadPath = '';
+        const isAudio = file.mimetype.startsWith("audio/");
+        const isImage = file.mimetype.startsWith("image/");
+        if(isAudio){
+            uploadPath = "src/assets/audio/";
+        } else if(isImage){
+            uploadPath = "src/assets/image/";
+        } else {
+            uploadPath = "src/assets/video/";
+        }
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        // const ext = file.originalname;
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+    }
+});
+
+// Bộ lọc chỉ cho phép file âm thanh, image và video (audio, image, video)
+const musicFileFilter = (req, file, cb) => {
+    const allowedAudioTypes = ["audio/mpeg", "audio/ogg"];
+    const allowedImageTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    const allowedVideoTypes = ["video/mp4", "video/mkv", "video/webm", "video/avi"];
+
+    if (allowedAudioTypes.includes(file.mimetype) || allowedImageTypes.includes(file.mimetype) || allowedVideoTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error("Không đúng định dạng file"), false);
+    }
 };
 
 // Cấu hình upload (image và video)
@@ -42,4 +73,13 @@ const upload = multer({
     }
 });
 
-module.exports = { upload };
+// Cấu hình upload music (music, image, video file)
+const uploadMusic = multer({
+    storage: storageMusicFile,
+    fileFilter: musicFileFilter,
+    limits: {
+        fileSize: 30 * 1024 * 1024 // Giới hạn file 30MB (tính bằng bytes)
+    }
+});
+
+module.exports = { upload, uploadMusic };

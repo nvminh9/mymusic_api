@@ -6,7 +6,7 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
 // Tạo mới một người dùng (CREATE)
-const createUserService = async (name, userName, gender, birth, email, password) => {
+const createUserService = async (name, userName, gender, birth, email, password, userAvatar, vec) => {
     try {
         // Hash password
         const hashPassword = await bcrypt.hash(password, saltRounds);
@@ -14,10 +14,12 @@ const createUserService = async (name, userName, gender, birth, email, password)
         let result = await User.create({
             name,
             userName,
-            gender,
-            birth,
+            gender: gender ? gender : null,
+            birth: birth ? birth : null,
             email,
             password: hashPassword,
+            userAvatar: userAvatar ? userAvatar : null,
+            embedding: vec ? `[${vec.join(',')}]` : null,
         });
         console.log(">>> ✅ Create user successfully: ");
         return result;
@@ -27,7 +29,7 @@ const createUserService = async (name, userName, gender, birth, email, password)
     }
 }
 
-// Lấy thông tin người dùng (READ)
+// Lấy thông tin người dùng (READ) (Tìm theo Email)
 const getUserService = async (email) => {
     // Tìm người dùng theo email
     try{
@@ -36,7 +38,39 @@ const getUserService = async (email) => {
                 email: email
             },
             attributes: {
-                exclude: ["password"]
+                exclude: ["password","embedding","email"]
+            },
+        });
+        // Kiểm tra người dùng có tồn tại không
+        if(user){
+            return {
+                status: 200,
+                message: "Tìm thấy người dùng",
+                data: user
+            };
+        }else {
+            return {
+                status: 404,
+                message: "Không tìm thấy người dùng",
+                data: null
+            };
+        }
+    }catch(error){
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
+
+// Lấy thông tin người dùng (READ) (Tìm theo userId)
+const getUserByIdService = async (userId) => {
+    // Tìm người dùng theo userId
+    try{
+        const user = await User.findOne({
+            where: {
+                userId: userId
+            },
+            attributes: {
+                exclude: ["password","embedding","email"]
             },
         });
         // Kiểm tra người dùng có tồn tại không
@@ -357,6 +391,7 @@ const deleteFollowUser = async (follower, userName) => {
 module.exports = {
     createUserService,
     getUserService,
+    getUserByIdService,
     getUserFollowerTotalService,
     getUserFollowTotalService,
     updateUserService,

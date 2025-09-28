@@ -6,15 +6,18 @@ const Blacklist = require("../models/sequelize/Blacklist");
 
 const auth = async (req, res, next) => {
     // Các route không cần xác thực
-    const allow_routes = ["/","/auth/signup","/auth/signin","/music/swimmingpool_master.m3u8"]; // Tạm thời ko cần auth cho route music/:file
+    const allow_routes = ["/","/auth/signup","/auth/signin","/auth/google/signup","/auth/google/signin"];
     // Kiểm tra xem request có phải route không cần xác thực không
     if(allow_routes.find(item => '/v1/api' + item === req.baseUrl + req.path)){
         next();
     }else {
+        // Check token socket.io handshake
+        // console.log(req.baseUrl + req.path);
+        // console.log(req?.headers?.authorization?.split(' ')?.[1]);
         // Check token
         if(req?.headers?.authorization?.split(' ')?.[1]){
             const token = req.headers.authorization.split(' ')[1];
-            // console.log(">>> Check token: ", token);
+            // console.log(">>> Check token socketIO: ", token);
             // Verify token
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET)

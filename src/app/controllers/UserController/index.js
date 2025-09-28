@@ -1,5 +1,6 @@
 const { getUserArticleTotal } = require("../../../services/articleService");
 const { getUserSongs } = require("../../../services/musicService");
+const { getUserPlaylistsService } = require("../../../services/playlistService");
 const { getUserService, getUserFollowerTotalService, getUserFollowTotalService, updateUserService, createFollowUser, getFollow, deleteFollowUser } = require("../../../services/userService");
 const dotenv = require('dotenv');
 dotenv.config();
@@ -178,19 +179,34 @@ class UserController{
     async getUserMusics(req, res){
         const { userName } = req.params;
         const result = {};
+
+        // Token
+        const token = req.headers.authorization.split(' ')[1];
+        // Lấy dữ liệu của auth user
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
         // Lấy danh sách bài nhạc của người dùng (theo userName)
-        const songs = await getUserSongs(userName);
-        if(songs){
-            result.status = 200;
-            result.message = "Danh sách bài nhạc của người dùng";
-            result.data = songs;
-            return res.status(200).json(result);
-        }else{
-            result.status = 404;
-            result.message = "Không tìm thấy danh sách bài nhạc của người dùng";
+        const songs = await getUserSongs(userName, null, userId);
+
+        // Lấy danh sách playlist của người dùng
+        const playlists = await getUserPlaylistsService(userName, userId);
+
+        // Kiểm tra            
+        if(songs === null){
+            result.status = 500;
+            result.message = 'Internal error';
             result.data = null;
-            return res.status(200).json(result);
+            return res.status(500).json(result); 
         }
+
+        // Kết quả
+        result.status = songs?.status ? songs?.status : 200;
+        result.message = 'Danh sách phát và nhạc của người dùng';
+        result.data = {};
+        result.data.songs = songs?.data ? songs?.data : null;
+        result.data.playlists = playlists?.data ? playlists?.data : null;
+        return res.status(songs?.status ? songs?.status : 200).json(result);
     };
 
     // Thực hiện theo dõi người dùng

@@ -2,6 +2,7 @@ const { createArticleService, getArticleService, getArticleComments, getArticleC
 const dotenv = require("dotenv");
 dotenv.config();
 const jwt = require("jsonwebtoken");
+const { getEmbedding } = require("../../ML/embedder");
 
 class ArticleController {
 
@@ -15,9 +16,11 @@ class ArticleController {
             // Lấy dữ liệu của auth user
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const userId = decoded.id;
+            const authUserName = decoded.userName;
             
             // Dữ liệu bài viết
-            let articleData = { textContent, privacy };
+            const articleEmbedding = await getEmbedding(`${textContent || ""}${authUserName || ""}`);
+            let articleData = { textContent, privacy, embedding: `[${articleEmbedding.join(',')}]` };
             articleData.userId = userId;
             // Dữ liệu files hình ảnh và video
             // Kiểm tra file upload
@@ -221,9 +224,12 @@ class ArticleController {
             // Lấy dữ liệu của auth user
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const userId = decoded.id;
+            const authUserName = decoded.userName;
 
+            // Tạo embedding
+            const sharedArticleEmbedding = await getEmbedding(`${sharedTextContent || ""}${authUserName || ""}`);
             // Service chia sẻ bài viết
-            const articleData = { userId, articleId, sharedTextContent, privacy };
+            const articleData = { userId, articleId, sharedTextContent, privacy, embedding: `[${sharedArticleEmbedding.join(',')}]` };
             const sharedArticle = await shareArticleService(articleData);
 
             // Kiểm tra

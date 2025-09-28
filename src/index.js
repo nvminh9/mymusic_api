@@ -6,17 +6,54 @@ const cors = require('cors');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { initSocket } = require('./socket.js');
 const dotenv = require('dotenv');
 dotenv.config();
 
+// Cron, background jobs
+const trendingSongJobs = require('./jobs/trendingSongJobs');
+const genreTrendingJobs = require('./jobs/genreTrendingJobs');
+
 // -- Config database (PostgreSQL) --
-const { sequelize, User } = require('./app/models/sequelize');
+const { sequelize, Genre } = require('./app/models/sequelize');
 // Sync (Đồng bộ lại database)
 (async () => {
-    // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
-    // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
-    await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
-    console.log("✅ Database đã được đồng bộ!");
+    try {
+        // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
+        // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
+        await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
+        
+        // Bất extension pg_trgm
+        await sequelize.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
+        console.log('✅ pg_trgm extension enabled');
+        
+        // Bật extension pgvector
+        await sequelize.query(`CREATE EXTENSION IF NOT EXISTS vector;`);
+        console.log('✅ pgvector extension enabled');
+
+        // Tạo các thể loại nhạc
+        const allGenre = await Genre.findAll();
+        if(allGenre?.length === 0){
+            await Genre.bulkCreate(
+                [
+                    { name: "Pop" },
+                    { name: "Rock" },
+                    { name: "Jazz" },
+                    { name: "Blues" },
+                    { name: "R&B/Soul" },
+                    { name: "Hip Hop" },
+                    { name: "EDM" },
+                ]
+            );
+            console.log('✅ Đã tạo các thể loại nhạc');
+        } else {
+            console.log('✅ Đã có các thể loại nhạc');
+        }
+
+        console.log("✅ Database đã được đồng bộ!");
+    } catch (error) {
+        console.error('❌ Sync database err:', error);
+    }
 })();
 
 // -- Config App Port --
@@ -27,7 +64,7 @@ const port = process.env.port || 3700;
 app.use(morgan('combined'));
 
 // -- Config CORS --
-// Bật CORS để client (khác domain) có thể truy cập
+// CORS
 app.use(cors());
 
 // -- Config req.body --
@@ -41,36 +78,32 @@ app.use(express.static(path.join(__dirname, 'assets'))); // Không cần Auth
 // Route Init
 route(app);
 
-// // Test thử HLS Streaming Audio (đã chuyển qua MusicController)
-// http.createServer(function (req, res){
-//     console.log("request starting...");
+// Create HTTP server
+const server = http.createServer(app);
 
-//     // var filePath = './assets/audio' + req.url;
-//     var filePath = 'D:/mymusic_api/src/assets/audio' + req.url;
-//     console.log(filePath)
+// Initialize socket.io and attach to server
+const io = initSocket(server);
 
-//     fs.readFile(filePath, function(error, content){
-//         res.writeHead(200, 
-//             {
-//                 'Access-Controll-Allow-Origin': '*'
-//             }
-//         );
-//         if(error){
-//             if(error.code == "ENOENT"){
-//                 // fs.readFile('./404.hmtl')
-//                 console.log("Not found");
-//             }else{
-//                 res.writeHead(500);
-//                 res.end("Sorry, check with the site admin for error: "+error.code+'...\n');
-//                 res.end();
-//             }
-//         }else{
-//             res.end(content, 'utf-8');
-//         }
-//     });
-// })
+// 
+server.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 
-// Test
-app.listen(port, () => {
-    console.log(`Example app listening on port http://localhost:${port}`)
+    // Start All Jobs
+    trendingSongJobs.startAllJobs(); // Trending Song Jobs
+    genreTrendingJobs.startAllJobs(); // Genre Trending Jobs
+
+    // On Server Shutdown
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM received, shutting down...');
+        trendingSongJobs.stopAllJobs(); // Clean shutdown
+        genreTrendingJobs.stopAllJobs(); // Clean shutdown
+        process.exit(0);
+    });
+    
+    process.on('SIGINT', () => {
+        console.log('SIGINT received, shutting down...');
+        trendingSongJobs.stopAllJobs(); // Clean shutdown
+        genreTrendingJobs.stopAllJobs(); // Clean shutdown
+        process.exit(0);
+    });
 })

@@ -6,7 +6,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const { getArticleService } = require('./articleService');
 
-
 // Thực hiện lấy thông tin bài chia sẻ 
 const getSharedArticleService = async (sharedArticleId, authUserId) => {
     try {

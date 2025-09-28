@@ -23,6 +23,9 @@ const Song = sequelize.define(
     genreId: {
         type: DataTypes.BIGINT,
     },
+    genreName: {
+        type: DataTypes.STRING(100),
+    },
     songImage: {
         type: DataTypes.STRING(2000),
     },
@@ -32,6 +35,18 @@ const Song = sequelize.define(
     songLink: {
         type: DataTypes.STRING(2000),
         allowNull: false,
+    },
+    duration: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+    },
+    changedCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
+    embedding: {
+        type: 'vector(384)', // tùy kích thước embedding model
+        // allowNull: false
     },
     createdAt: {
         type: DataTypes.DATE,

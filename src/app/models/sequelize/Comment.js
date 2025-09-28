@@ -32,6 +32,10 @@ const Comment = sequelize.define(
         type: DataTypes.STRING(500),
         allowNull: false,
     },
+    changedCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
     createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại

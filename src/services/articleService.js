@@ -100,7 +100,10 @@ const getArticleService = async (articleId, authUserId) => {
             where: {
                 articleId: articleId,
             },
-            include: [{ model: User, attributes: { exclude: ['password'] } }, { model: Photo}, { model: Video}]
+            attributes: {
+                exclude: ['embedding']
+            },
+            include: [{ model: User, attributes: { exclude: ['password','embedding','email'] } }, { model: Photo}, { model: Video}]
         });
         // Kiểm tra
         if(article){
@@ -695,7 +698,7 @@ const deleteArticleService = async (articleId, authUserId) => {
     }
 };
 
-// Lấy ra số bài viết của người dùng (theo userId)
+// Lấy ra số bài viết của người dùng (theo userId) (dùng trong Profile)
 const getUserArticleTotal = async (userName, authUserId) => {
     const result = {};
     try {
@@ -764,13 +767,13 @@ const getUserArticleTotal = async (userName, authUserId) => {
             articleIds.map(async (articleData) => {
                 if(articleData.articleType === 'article'){
                     const article = await getArticleService(articleData.articleId, authUserId);
-                    return article ? article.data.dataValues : null;
+                    return article && article?.data ? article.data.dataValues : null;
                 } else if (articleData.articleType === 'sharedArticle') {
                     const sharedArticle = await getSharedArticleService(articleData.sharedArticleId, authUserId);
-                    return sharedArticle ? sharedArticle.data.dataValues : null;
+                    return sharedArticle && sharedArticle?.data ? sharedArticle.data.dataValues : null;
                 }
             })
-        );        
+        );
 
         // Kết quả
         result.articles = articleArray.filter(Boolean);
@@ -830,7 +833,7 @@ const shareArticleService = async (articleData) => {
     }
 };
 
-// Thực hiện lấy thông tin bài chia sẻ 
+// Thực hiện lấy thông tin bài chia sẻ (Dùng trong articleService)
 const getSharedArticleService = async (sharedArticleId, authUserId) => {
     try {
         // Tìm bài chia sẻ
@@ -893,6 +896,5 @@ module.exports = {
     unLikeArticleService,
     getArticleLikesService,
     deleteArticleService,
-    shareArticleService,
-    getSharedArticleService
+    shareArticleService
 }

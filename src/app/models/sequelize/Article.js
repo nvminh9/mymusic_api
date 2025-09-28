@@ -22,6 +22,14 @@ const Article = sequelize.define(
       type: DataTypes.BIGINT, // 0: public, 1: private
       allowNull: false,
     },
+    changedCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
+    embedding: {
+        type: 'vector(384)', // tùy kích thước embedding model
+        // allowNull: false
+    },
     createdAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại

@@ -43,6 +43,10 @@ const User = sequelize.define(
     description: {
         type: DataTypes.STRING(1000),
     },
+    embedding: {
+        type: 'vector(384)', // tùy kích thước embedding model
+        // allowNull: false
+    },
     // createdAt: {
     //     type: DataTypes.DATE,
     //     defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại

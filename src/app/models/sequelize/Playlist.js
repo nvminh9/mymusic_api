@@ -23,8 +23,28 @@ const Playlist = sequelize.define(
         allowNull: true,
     },
     type: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(50), // Loại: default (danh sách phát), album,...
         allowNull: false,
+    },
+    description: {
+        type: DataTypes.STRING(1500), // Mô tả
+        allowNull: true,
+    },
+    userTags: {
+        type: DataTypes.STRING(1000), // Chứa chuỗi các tag user (ex. @userName)
+        allowNull: true,
+    },
+    privacy: {
+      type: DataTypes.BIGINT, // 0: public, 1: private
+      allowNull: true,
+    },
+    changedCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
+    embedding: {
+        type: 'vector(384)', // tùy kích thước embedding model
+        // allowNull: false
     },
     createdAt: {
         type: DataTypes.DATE,
