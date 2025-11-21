@@ -58,6 +58,32 @@ const { sequelize, Genre } = require('./app/models/sequelize');
 
 // -- Config App Port --
 const port = process.env.port || 3700;
+console.log(`
+    
+    
+    
+    
+    
+    
+    ***
+    DB LOG TEST
+    DB LOG TEST
+    DB HOST: ${process.env.DB_HOST}
+    DB LOG TEST
+    DB NAME: ${process.env.DB_NAME}
+    DB LOG TEST
+    DB LOG TEST
+    ***
+    
+    
+    
+    
+    
+    
+    
+    `);
+console.log("DB HOST: ", process.env.DB_HOST);
+console.log("DB NAME: ", process.env.DB_NAME);
 
 // -- Config Request Log --
 // Log all request
