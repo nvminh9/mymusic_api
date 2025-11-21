@@ -19,6 +19,9 @@ const { sequelize, Genre } = require('./app/models/sequelize');
 // Sync (Đồng bộ lại database)
 (async () => {
     try {
+        const user = await sequelize.query(`SELECT "userId","name","userName" FROM "user"`);
+        console.log(user);
+        
         // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
         // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
         await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
