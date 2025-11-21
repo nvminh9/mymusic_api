@@ -5,14 +5,14 @@ const { v4: uuidv4 } = require("uuid");
 const { sequelize, Conversation, ConversationParticipant, Message, User, MessageStatus } = require('../../models/sequelize');
 const { Op } = require('sequelize');
 const { encodeCursor, decodeCursor } = require('../../../utils/messageCursor');
-const { Redis } = require('ioredis');
+// const { Redis } = require('ioredis');
 const { getMessagesService } = require("../../../services/messageService");
 
 // Redis publisher
-const redisClient = new Redis({
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379,
-});
+// const redisClient = new Redis({
+//     host: process.env.REDIS_HOST || '127.0.0.1',
+//     port: process.env.REDIS_PORT || 6379,
+// });
 
 class MessageController {
     
@@ -160,13 +160,13 @@ class MessageController {
             };
 
             // stringify without circulars
-            try {
-                await redisClient.publish(channel, JSON.stringify(payload));
-                // console.log("Line 138: Redis publish ", payload);
-            } catch (pubErr) {
-                console.error("Redis publish failed:", pubErr);
-                // Non-fatal: message persisted, we still return success
-            }
+            // try {
+            //     await redisClient.publish(channel, JSON.stringify(payload));
+            //     // console.log("Line 138: Redis publish ", payload);
+            // } catch (pubErr) {
+            //     console.error("Redis publish failed:", pubErr);
+            //     // Non-fatal: message persisted, we still return success
+            // }
 
             // Return created message
             return res.status(201).json({ message: savedMessage });
