@@ -462,7 +462,8 @@ class GenreTrendingService {
                 include: [
                     {
                         model: Genre,
-                        attributes: ['genreId', 'name']
+                        attributes: ['genreId', 'name'],
+                        as: 'TrendingSongs'
                     }
                 ],
                 attributes: [

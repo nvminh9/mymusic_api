@@ -15,6 +15,7 @@ router.post('/:userName/follow', userController.handleFollowUser); // Theo dõi 
 router.patch('/:userName/unfollow', userController.handleUnfollowUser) // Hủy theo dõi người dùng
 router.get('/:userName/articles', userController.getUserArticles); // Danh sách bài viết của user
 router.get('/:userName/musics', userController.getUserMusics); // Danh sách bài nhạc của user
+router.get('/reference/search', userController.findReferenceUser); // Tìm kiếm người dùng có sự liên quan (theo dõi, đang theo dõi) với người đang tìm kiếm
 router.get('/', userController.index); // route '/' để ở dưới cùng
 
 module.exports = router;

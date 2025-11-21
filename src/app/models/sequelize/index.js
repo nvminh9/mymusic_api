@@ -33,11 +33,14 @@ User.hasMany(Article, { foreignKey: "userId" });
 User.hasMany(Comment, { foreignKey: "userId" });
 User.hasMany(Song, { foreignKey: "userId" });
 User.hasMany(Playlist, { foreignKey: "userId" });
-User.hasMany(Follower, { foreignKey: "userId" });
-User.hasMany(Follower, { foreignKey: "followerId" });
+User.hasMany(Follower, { foreignKey: "userId", sourceKey: "userId", as: "followers" }); // Người theo dõi
+User.hasMany(Follower, { foreignKey: "followerId", sourceKey: "userId", as: "following" }); // Đang theo dõi
 User.hasMany(LikeArticle, { foreignKey: "userId" });
 User.hasMany(LikeSong, { foreignKey: "userId" });
 User.hasMany(Message, { foreignKey: "senderId", sourceKey: "userId" });
+User.hasMany(MessageStatus, { foreignKey: "userId", sourceKey: "userId" });
+User.hasMany(ConversationParticipant, { foreignKey: "userId", sourceKey: "userId" });
+// User.hasMany(Conversation, { foreignKey: "userId", sourceKey: "userId" });
 // Article
 Article.belongsTo(User, { foreignKey: "userId" });
 Article.hasMany(Comment, { foreignKey: "articleId" });
@@ -96,8 +99,8 @@ Song.hasMany(TrendingSong, { foreignKey: "songId", sourceKey: "songId", as: "Tre
 Playlist.belongsTo(User, { foreignKey: "userId" });
 Playlist.hasMany(PlaylistDetail, { foreignKey: "playlistId" });
 // Follower
-Follower.belongsTo(User, { foreignKey: "followerId", as: "followerUser" }); // Người theo dõi
-Follower.belongsTo(User, { foreignKey: "userId", as: "followingUser" }) // Đang theo dõi
+Follower.belongsTo(User, { foreignKey: "followerId", targetKey: "userId", as: "followerUser" }); // Người theo dõi
+Follower.belongsTo(User, { foreignKey: "userId", targetKey: "userId", as: "followingUser" }) // Đang theo dõi
 // Listening History
 ListeningHistory.belongsTo(User, { foreignKey: "userId" });
 ListeningHistory.belongsTo(Song, { foreignKey: "songId" });
@@ -121,12 +124,23 @@ TrendingSong.belongsTo(Song, { foreignKey: "songId", include: [
 TrendingSong.belongsTo(Genre, { foreignKey: "genreId", targetKey: "genreId", as: "Genre" });
 // Conversation
 Conversation.hasMany(ConversationParticipant, { foreignKey: "conversationId", sourceKey: "conversationId" });
-Conversation.hasMany(Message, { foreignKey: "conversationId", sourceKey: "conversationId" });
+Conversation.hasMany(ConversationParticipant, { foreignKey: "conversationId", sourceKey: "conversationId", as: 'participants' }); // Các thành viên của Conversation
+Conversation.hasMany(Message, { foreignKey: "conversationId", sourceKey: "conversationId" }); // Các tin nhắn của Conversation
+Conversation.hasMany(Message, { foreignKey: "conversationId", sourceKey: "conversationId", as: "newestMessage" }); // Tin nhắn mới nhất của Conversation
+Conversation.hasMany(MessageStatus, { foreignKey: "conversationId", sourceKey: "conversationId" });
+Conversation.hasMany(MessageStatus, { foreignKey: "conversationId", as: 'unseenMessage' }); // Các tin nhắn trong Conversation mà người dùng chưa xem 
+// Conversation.belongsTo(User, { foreignKey: "userId", targetKey: "userId" });
 // ConversationParticipant
 ConversationParticipant.belongsTo(Conversation, { foreignKey: "conversationId", targetKey: "conversationId" });
+ConversationParticipant.belongsTo(User, { foreignKey: "userId", targetKey: "userId" });
 // Message
 Message.belongsTo(Conversation, { foreignKey: "conversationId", targetKey: "conversationId" });
 Message.belongsTo(User, { foreignKey: "senderId", targetKey: "userId", as: "Sender" });
+Message.hasMany(MessageStatus, { foreignKey: "messageId", sourceKey: "messageId", as: "Statuses" });
+// MessageStatus
+MessageStatus.belongsTo(Message, { foreignKey: "messageId", targetKey: "messageId" });
+MessageStatus.belongsTo(User, { foreignKey: "userId", targetKey: "userId" });
+MessageStatus.belongsTo(Conversation, { foreignKey: "conversationId", targetKey: "conversationId" });
 
 module.exports = {
     sequelize,

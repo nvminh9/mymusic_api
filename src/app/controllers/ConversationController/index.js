@@ -3,6 +3,7 @@ dotenv.config();
 const jwt = require("jsonwebtoken");
 const { sequelize, Conversation, ConversationParticipant } = require('../../models/sequelize');
 const { Op } = require('sequelize');
+const { getListConversationsService, searchConversationService } = require("../../../services/conversationService");
 
 class ConversationController {
     
@@ -28,6 +29,7 @@ class ConversationController {
 
             const { type, participantIds = [], title, avatar } = req.body;
 
+            // Check type
             if (!type || (type !== "dm" && type !== "group")) {
                 await t.rollback();
                 return res.status(400).json({ message: "Type must be 'dm' or 'group'" });
@@ -107,6 +109,75 @@ class ConversationController {
     async index(req, res){
         // 
         return res.status(200).json('Conversation Controller Method Index');
+    };
+
+    // [GET] /conversation/list (Lấy các Conversation của user)
+    async listConversation(req, res){
+        const result = {};
+    
+        // Token
+        const token = req.headers.authorization.split(' ')[1];
+        // Lấy dữ liệu của auth user
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const authUserId = decoded.id; // userId của người request
+
+        // Fetch conversations where auth user is a participant
+        try {
+            // Service
+            const listConversation = await getListConversationsService(authUserId);
+
+            // Kiểm tra
+            if(listConversation === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            };
+
+            // Kết quả
+            result.status = listConversation?.status ? listConversation?.status : 200;
+            result.message = listConversation?.message ? listConversation?.message : 'No messages';
+            result.data = listConversation?.data ? listConversation?.data : null;
+            return res.status(listConversation?.status ? listConversation?.status : 200).json(result); 
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ message: "Failed to fetch conversations" });
+        }
+    };
+
+    // [GET] /conversation/search?q&limit=10
+    async searchConversation(req, res){
+        const result = {};
+
+        const { q = '' } = req.query;
+
+        // Token
+        const token = req.headers.authorization.split(' ')[1];
+        // Lấy dữ liệu của auth user
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const authUserId = decoded.id; // userId của người request
+
+        try {
+            // Service
+            const searchConversationResult = await searchConversationService(q,authUserId);
+
+            // Kiểm tra
+            if(searchConversationResult === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            };
+
+            // Kết quả
+            result.status = searchConversationResult?.status ? searchConversationResult?.status : 200;
+            result.message = searchConversationResult?.message ? searchConversationResult?.message : 'No messages';
+            result.data = searchConversationResult?.data ? searchConversationResult?.data : null;
+            return res.status(searchConversationResult?.status ? searchConversationResult?.status : 200).json(result); 
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ message: "Failed to search conversations" });
+        }
     };
 }
 

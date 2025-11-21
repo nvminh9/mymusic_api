@@ -6,6 +6,7 @@ const { sequelize, Conversation, ConversationParticipant, Message, User, Message
 const { Op } = require('sequelize');
 const { encodeCursor, decodeCursor } = require('../../../utils/messageCursor');
 const { Redis } = require('ioredis');
+const { getMessagesService } = require("../../../services/messageService");
 
 // Redis publisher
 const redisClient = new Redis({
@@ -66,24 +67,24 @@ class MessageController {
             }
 
             // Idempotency: if clientMessageId provided, check existing message with same metadata.clientMessageId & sender
-            const clientMessageId = JSON.parse(metadata)?.clientMessageId || null;
+            const clientMessageId = metadata?.clientMessageId || null;
             // console.log("Line 70: ", clientMessageId);
             if (clientMessageId) {
-            const existing = await Message.findOne({
-                where: {
-                    senderId,
-                    metadata: { [Op.contains]: { clientMessageId } }, // JSONB contains
-                },
-                transaction: t,
-            });
-            if (existing) {
-                // Return existing message (idempotent)
-                await t.commit();
-                const resMessage = await Message.findByPk(existing.messageId, {
-                    include: [{ model: User, as: "Sender", attributes: ["userId", "name", "userName", "userAvatar"] }],
+                const existing = await Message.findOne({
+                    where: {
+                        senderId,
+                        metadata: { [Op.contains]: { clientMessageId } }, // JSONB contains
+                    },
+                    transaction: t,
                 });
-                return res.status(200).json({ message: resMessage });
-            }
+                if (existing) {
+                    // Return existing message (idempotent)
+                    await t.commit();
+                    const resMessage = await Message.findByPk(existing.messageId, {
+                        include: [{ model: User, as: "Sender", attributes: ["userId", "name", "userName", "userAvatar"] }],
+                    });
+                    return res.status(200).json({ message: resMessage });
+                }
             }
 
             // Create messageId (server side) if client didn't provide
@@ -96,7 +97,7 @@ class MessageController {
                 senderId,
                 content,
                 type,
-                metadata: JSON.parse(metadata),
+                metadata: metadata,
             }, { transaction: t });
 
             // OPTIONAL: Create message_status rows for participants (delivered_at = null initially)
@@ -132,7 +133,25 @@ class MessageController {
                 include: [{ model: User, as: "Sender", attributes: ["userId", "name", "userName", "userAvatar"] }],
             });
 
-            // Publish to Redis for realtime fan-out:
+            // // *** Socket Emit ***
+            // // Emit to conversation room (will propagate across instances via Redis adapter)
+            // io.to(`conversation:${conversationId}`).emit("message_created", { message: savedMessage });
+
+            // // Also emit notification to each participant's personal room for push/ UI updates
+            // participantIds.forEach(pid => {
+            //     io.to(`user:${pid}`).emit("conversation_new_message", {
+            //         conversationId,
+            //         messageSummary: {
+            //             messageId,
+            //             conversationId,
+            //             senderId: senderId,
+            //             content: (type === "text" ? (content?.slice(0, 200) || "") : `[${type}]`),
+            //             createdAt: savedMessage.createdAt,
+            //         }
+            //     });
+            // });
+
+            // *** Publish to Redis for realtime fan-out: ***
             // Channel: conversation:{conversationId}
             const channel = `conversation:${conversationId}`;
             const payload = {
@@ -168,94 +187,36 @@ class MessageController {
         Returns messages ordered DESC (newest first) and nextCursor for older messages.
     */
     async getMessages(req, res){
-        try {
-            const { conversationId } = req.params;
-
+        try {            
             // Token
             const token = req.headers.authorization.split(' ')[1];
             // Lấy dữ liệu của auth user
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const authUserId = decoded.id; // userId của người request
             
-            const limit = Math.min(parseInt(req.query.limit || "20", 10), 100);
-
-            // 1) Check conversation exists and user is participant
-            const conv = await Conversation.findByPk(conversationId);
-            if (!conv) return res.status(404).json({ message: "Conversation not found" });
-
-            const isParticipant = await ConversationParticipant.findOne({
-                where: { conversationId, userId: authUserId }
-            });
-            if (!isParticipant) return res.status(403).json({ message: "Not a participant" });
-
-            // 2) Decode cursor (if provided)
-            const rawCursor = req.query.cursor;
-            let whereClause = { conversationId };
+            // Params
+            const { conversationId } = req.params;
             
-            if (rawCursor) {
-                const decoded = decodeCursor(rawCursor);
-                // console.log(rawCursor);
-                console.log(decoded);
-                if (!decoded || !decoded.createdAt || !decoded.messageId) {
-                    return res.status(400).json({ message: "Invalid cursor" });
-                }
-                const cursorCreatedAt = new Date(decoded.createdAt);
-                const cursorMessageId = decoded.messageId;
+            // Query params
+            const rawCursor = req.query.cursor; // cursor
+            const limit = Math.min(parseInt(req.query.limit || "20", 10), 100); // limit
 
-                // We want rows strictly older than the cursor: (created_at, message_id) < (cursorCreatedAt, cursorMessageId)
-                // Sequelize can't do row-wise comparison portably, so use equivalent logic:
-                whereClause = {
-                    conversationId,
-                    [Op.or]: [
-                        { createdAt: { [Op.lt]: cursorCreatedAt } },
-                        {
-                            [Op.and]: [
-                                { createdAt: cursorCreatedAt },
-                                { messageId: { [Op.lt]: cursorMessageId } }
-                            ]
-                        }
-                    ]
-                };
+            // Service
+            const messages = await getMessagesService(conversationId, rawCursor, limit, authUserId);
+
+            // Kiểm tra
+            if(messages === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
             }
 
-            // 3) Query messages (newest first)
-            const messages = await Message.findAll({
-                where: whereClause,
-                order: [
-                    ["createdAt", "DESC"],
-                    ["messageId", "DESC"]
-                ],
-                limit,
-                include: [
-                    // Include sender basic info (if you have User model properly)
-                    { model: User, as: "Sender", attributes: ["userId", "name", "userName", "userAvatar"], required: false }
-                ],
-                raw: false,
-            });
-
-            // 4) Build nextCursor
-            let nextCursor = null;
-            if (messages.length === limit) {
-                const last = messages[messages.length - 1];
-                // Cursor will point to last returned message; next fetch will get older than this
-                nextCursor = encodeCursor({ createdAt: last.createdAt.toISOString(), messageId: last.messageId });
-            }
-
-            // 5) Return messages in chronological order expected by many clients:
-            // Client often expects messages oldest -> newest in the page; but we returned newest-first.
-            // We will return messages reversed so array is oldest->newest (optional, choose what client expects).
-            const messagesChron = messages.slice().reverse().map(m => {
-                // Plain object
-                const obj = m.toJSON();
-                // Rename Sender -> sender for client (if included)
-                if (obj.Sender) {
-                    obj.sender = obj.Sender;
-                    delete obj.Sender;
-                }
-                return obj;
-            });
-
-            return res.json({ messages: messagesChron, nextCursor });
+            // Kết quả
+            const result = {...messages};
+            // result.status = messages?.status ? messages?.status : 200;
+            // result.message = messages?.message ? messages?.message : 'No messages';
+            return res.status(messages?.status ? messages?.status : 200).json(result); 
         } catch (err) {
             console.error(err);
             return res.status(500).json({ message: "Failed to fetch messages" });

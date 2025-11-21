@@ -9,8 +9,12 @@ const MessageStatus = sequelize.define(
         primaryKey: true,
     },
     userId: {
+      type: DataTypes.UUID,
+      primaryKey: true,
+    },
+    conversationId: {
         type: DataTypes.UUID,
-        primaryKey: true,
+        allowNull: true,
     },
     deliveredAt: {
         type: DataTypes.DATE,

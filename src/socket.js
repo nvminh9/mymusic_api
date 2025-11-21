@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
-const { Redis } = require("ioredis");
-const { createAdapter } = require("@socket.io/redis-adapter");
+// const { Redis } = require("ioredis");
+// const { createAdapter } = require("@socket.io/redis-adapter");
 const dotenv = require('dotenv');
 dotenv.config();
 const jwt = require("jsonwebtoken");
@@ -8,7 +8,7 @@ const { sequelize, Conversation, ConversationParticipant, Message, MessageStatus
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require("uuid");
 
-const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+// const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
 const JWT_SECRET = process.env.JWT_SECRET || "changeme";
 const STATUS_CREATE_THRESHOLD = parseInt(process.env.STATUS_CREATE_THRESHOLD || "500", 10);
 
@@ -25,19 +25,19 @@ function initSocket(server) {
 
     // Redis clients for adapter
     // const pubClient = new Redis(REDIS_URL);
-    const pubClient = new Redis({
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: process.env.REDIS_PORT || '6379'
-    });
-    const subClient = pubClient.duplicate();
-    io.adapter(createAdapter(pubClient, subClient));
+    // const pubClient = new Redis({
+    //     host: process.env.REDIS_HOST || '127.0.0.1',
+    //     port: process.env.REDIS_PORT || '6379'
+    // });
+    // const subClient = pubClient.duplicate();
+    // io.adapter(createAdapter(pubClient, subClient));
 
     // A separate Redis client for presence and other ops
     // const redis = new Redis(REDIS_URL);
-    const redis = new Redis({
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: process.env.REDIS_PORT || '6379'
-    });
+    // const redis = new Redis({
+    //     host: process.env.REDIS_HOST || '127.0.0.1',
+    //     port: process.env.REDIS_PORT || '6379'
+    // });
 
     // Middleware for auth during handshake
     io.use(async (socket, next) => {
@@ -60,7 +60,7 @@ function initSocket(server) {
             socket.join(`user:${payload.id}`);
 
             // add socket id to presence set
-            await redis.sadd(`${PRESENCE_KEY}${payload.id}`, socket.id);
+            // await redis.sadd(`${PRESENCE_KEY}${payload.id}`, socket.id);
 
             // broadcast presence to followers/contacts if needed (simplified)
             // io.to(`user:${payload.id}`).emit('presence', { userId: payload.id, online: true });
@@ -117,16 +117,29 @@ function initSocket(server) {
             const tx = await sequelize.transaction();
             try {
                 const { conversationId, content, type = "text", metadata = {} } = payload;
-                if (!conversationId) throw new Error("conversationId required");
 
-                // validate participant
+                // Check conversationId
+                if(!conversationId){
+                    await tx.rollback();
+                    throw new Error("conversationId required")
+                };
+
+                // Check content
+                if(!content?.trim()){
+                    await tx.rollback();
+                    throw new Error("No content entered");
+                }
+
+                // Validate participant
                 const participant = await ConversationParticipant.findOne({
                     where: { conversationId, userId },
                     transaction: tx,
                 });
-                if (!participant) throw new Error("Not a participant");
+                if(!participant){
+                    throw new Error("Not a participant")
+                };
 
-                // idempotency by clientMessageId in metadata
+                // Idempotency by clientMessageId in metadata
                 const clientMessageId = metadata.clientMessageId || null;
                 if (clientMessageId) {
                     const existing = await Message.findOne({
@@ -149,7 +162,7 @@ function initSocket(server) {
                     }
                 }
 
-                // persist message
+                // Persist message
                 const messageId = uuidv4();
                 const newMsg = await Message.create({
                     messageId,
@@ -160,7 +173,7 @@ function initSocket(server) {
                     metadata,
                 }, { transaction: tx });
 
-                // load participants
+                // Load participants
                 const participants = await ConversationParticipant.findAll({
                     where: { conversationId },
                     attributes: ["userId"],
@@ -168,24 +181,39 @@ function initSocket(server) {
                 });
                 const participantIds = participants.map(p => p.userId);
 
-                // create message_status rows (caveat large groups)
+                // Create message_status rows (caveat large groups)
                 if (participantIds.length <= STATUS_CREATE_THRESHOLD) {
                     const statuses = participantIds.map(uid => ({
                         messageId,
                         userId: uid,
+                        conversationId,
                         deliveredAt: uid === userId ? new Date() : null,
                         readAt: uid === userId ? new Date() : null,
                     }));
                     await MessageStatus.bulkCreate(statuses, { transaction: tx });
                 } else {
-                // For large groups: skip eager insertion; optionally push to background worker
+                    // *** For large groups: skip eager insertion; optionally push to background worker ***
                 }
+
+                // Update newestMessageCreatedAt in Conversation
+                await Conversation.update(
+                    { 
+                        newestMessageCreatedAt: newMsg.dataValues.createdAt
+                    },
+                    {
+                        where: {
+                            conversationId: conversationId
+                        }
+                    }
+                );
 
                 await tx.commit();
 
-                // eager load sender info
-                const savedMessage = await Message.findByPk(messageId, {
-                    include: [{ model: User, as: "Sender", attributes: ["userId", "name", "userName", "userAvatar"] }],
+                // Eager load sender info
+                let savedMessage = await Message.findByPk(messageId, {
+                    include: [
+                        { model: User, as: "Sender", attributes: ["userId", "name", "userName", "userAvatar"] },
+                    ],
                 });
 
                 // Emit to conversation room (will propagate across instances via Redis adapter)
@@ -195,13 +223,14 @@ function initSocket(server) {
                 participantIds.forEach(pid => {
                     io.to(`user:${pid}`).emit("conversation_new_message", {
                         conversationId,
-                        messageSummary: {
-                        messageId,
-                        conversationId,
-                        senderId: userId,
-                        content: (type === "text" ? (content?.slice(0, 200) || "") : `[${type}]`),
-                        createdAt: savedMessage.createdAt,
-                        }
+                        message: savedMessage
+                        // messageSummary: {
+                        //     messageId,
+                        //     conversationId,
+                        //     senderId: userId,
+                        //     content: (type === "text" ? (content?.slice(0, 200) || "") : `[${type}]`),
+                        //     createdAt: savedMessage.createdAt,
+                        // }
                     });
                 });
 
@@ -218,45 +247,63 @@ function initSocket(server) {
 
         /**
          * Client acknowledges delivery/read
-         * payload: { messageId, status: 'delivered'|'read' }
+         * payload: [{ messageId, status: 'delivered'|'read' }, ...]
          */
-        socket.on("message_ack", async ({ messageId, status }) => {
+        socket.on("message_ack", async (payload) => {
             try {
-                if (!messageId || !status) return;
+                if (!Array.isArray(payload)) return;
+                if (payload.length === 0) return;
+                
                 const now = new Date();
-                if (status === "delivered") {
-                await MessageStatus.upsert({
-                    messageId,
-                    userId,
-                    deliveredAt: now,
-                }, { where: { messageId, userId }});
-                } else if (status === "read") {
-                await MessageStatus.upsert({
-                    messageId,
-                    userId,
-                    readAt: now,
-                }, { where: { messageId, userId }});
+                
+                payload?.forEach(async (ackItem) => {
+                    if (!ackItem.messageId || !ackItem.status) return;
+                    
+                    const { messageId, status } = ackItem;
 
-                // optionally update conversation_participant.last_read_message_id
-                const msg = await Message.findByPk(messageId);
-                if (msg) {
-                    await ConversationParticipant.update(
-                    { lastReadMessageId: messageId },
-                    { where: { conversationId: msg.conversationId, userId } }
-                    );
-                }
-                }
+                    if (status === "delivered") {
+                        // optionally update conversation_participant.last_read_message_id
+                        const msg = await Message.findByPk(messageId);
 
-                // Broadcast update to other participants
-                const msg = await Message.findByPk(messageId);
-                if (msg) {
-                    io.to(`conversation:${msg.conversationId}`).emit("message_status_update", {
-                        messageId,
-                        userId,
-                        status,
-                        at: now,
-                    });
-                }
+                        await MessageStatus.upsert({
+                            messageId,
+                            conversationId: msg ? msg.conversationId : null,
+                            userId,
+                            deliveredAt: now,
+                        }, { where: { messageId, userId }});
+                    } else if (status === "read") {
+                        // optionally update conversation_participant.last_read_message_id
+                        const msg = await Message.findByPk(messageId);
+                        
+                        await MessageStatus.upsert({
+                            messageId,
+                            conversationId: msg ? msg.conversationId : null,
+                            userId,
+                            readAt: now,
+                        }, { where: { messageId, userId }});
+
+                        
+                        if (msg) {
+                            await ConversationParticipant.update(
+                                { lastReadMessageId: messageId },
+                                { 
+                                    where: { conversationId: msg.conversationId, userId } 
+                                }
+                            );
+                        }
+                    }
+
+                    // Broadcast update to other participants
+                    const msg = await Message.findByPk(messageId);
+                    if (msg) {
+                        io.to(`conversation:${msg.conversationId}`).emit("message_status_update", {
+                            messageId,
+                            userId,
+                            status,
+                            at: now,
+                        });
+                    }
+                });
             } catch (err) {
                 console.error("message_ack error", err);
             }
@@ -272,13 +319,98 @@ function initSocket(server) {
             });
         });
 
+        socket.on("conversation_read", async ({ conversationId, lastReadMessageId }) => {
+            const userId = socket.user.userId;
+            const now = new Date();
+            // console.log(`Người dùng ${userId} đã xem tin nhắn cuộc trò chuyện ${conversationId}`);
+
+            // Cập nhật MessageStatus cho các message chưa được xem của Conversation này (readAt = null)
+            await MessageStatus.update(
+                { readAt: now },
+                {
+                    where: {
+                        conversationId,
+                        userId: userId,
+                        readAt: null
+                    }
+                }
+            );
+
+            // Lấy lastReadMessageId và cập nhật lastReadMessageId tương ứng cho thành viên trong ConversationParticipant
+            // const lastReadMessageFromDB = await MessageStatus.findAll({
+            //     where: {
+            //         conversationId: conversationId,
+            //         userId: userId,
+            //         // readAt: now,
+            //     },
+            //     order: [
+            //         ["readAt", "DESC"], // Mới nhất trước
+            //     ],
+            //     limit: 1,
+            //     // attributes: ["messageId"]
+            // });
+            // const lastReadMessageId = lastReadMessageFromDB?.[0]?.dataValues?.messageId;
+            // const lastReadMessageReadedAt= lastReadMessageFromDB?.[0]?.dataValues?.readAt;
+            // // Update lastReadMessageId in ConversationParticipant
+            // // console.log(lastReadMessageReadedAt);
+            // if(!lastReadMessageReadedAt && userId === lastReadMessageFromDB?.[0]?.dataValues?.userId){
+            //     await ConversationParticipant.update(
+            //         { lastReadMessageId: lastReadMessageId },
+            //         {
+            //             where: {
+            //                 conversationId: conversationId,
+            //                 userId: userId,
+            //             }
+            //         }
+            //     );
+            // }
+
+            // Cập nhật lastReadMessageId cho thành viên tương ứng trong ConversationParticipant
+            await ConversationParticipant.update(
+                { lastReadMessageId: lastReadMessageId },
+                {
+                    where: {
+                        conversationId: conversationId,
+                        userId: userId,
+                    }
+                }
+            );
+
+            // Thông báo tới các thành viên còn lại trong conversation
+            // socket.to(`convrsation:${conversationId}`).emit("conversation_read_by", {
+            //     userId: userId,
+            //     conversationId: conversationId,
+            //     deliveredAt: null,
+            //     readAt: now,
+            //     User: user,
+            // });
+            // Participants
+            const participants = await ConversationParticipant.findAll({
+                where: { 
+                    conversationId 
+                },
+                attributes: ["userId"],
+            });
+            const participantIds = participants.map(p => p.userId);
+            participantIds.forEach((participantId) => {
+                // console.log('lastReadMessageId at Socket: ', lastReadMessageId)
+                socket.to(`user:${participantId}`).emit("conversation_read_by", {
+                    userId: userId,
+                    conversationId: conversationId,
+                    // readAt: lastReadMessageReadedAt,
+                    readAt: now,
+                    lastReadMessageId: lastReadMessageId,
+                });
+            });
+        });
+
         // Disconnect handling: remove from presence set
         socket.on("disconnect", async (reason) => {
             console.log(`Socket disconnected ${socket.id} user:${userId} reason:${reason}`);
             try {
-                await redis.srem(`${PRESENCE_KEY}${userId}`, socket.id);
+                // await redis.srem(`${PRESENCE_KEY}${userId}`, socket.id);
                 // check if user has any sockets left
-                const remaining = await redis.scard(`${PRESENCE_KEY}${userId}`);
+                // const remaining = await redis.scard(`${PRESENCE_KEY}${userId}`);
                 if (remaining === 0) {
                 // user offline
                 socket.broadcast.emit("presence", { userId, online: false });

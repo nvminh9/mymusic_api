@@ -1,8 +1,9 @@
 const dotenv = require('dotenv');
 dotenv.config();
-const { User } = require('../app/models/sequelize');
+const { User, sequelize } = require('../app/models/sequelize');
 const { Follower } = require('../app/models/sequelize');
 const bcrypt = require('bcrypt');
+const { Op } = require('sequelize');
 const saltRounds = 10;
 
 // Tạo mới một người dùng (CREATE)
@@ -388,6 +389,44 @@ const deleteFollowUser = async (follower, userName) => {
     }
 }
 
+// Thực hiện tìm kiếm người dùng có sự liên quan
+const findReferenceUserService = async (query, authUserId) => {
+    try {
+        // Tìm kiếm
+        const referenceUser = await User.findAll({
+            attributes: ["userId","name","userName","userAvatar"],
+            where: {
+                userName: {
+                    [Op.in]: sequelize.literal(`(
+                        (SELECT "userName" 
+                        FROM "follower" AS "fl" 
+                        WHERE "fl"."followerId" = :authUserId 
+                        AND "fl"."userName" ILIKE :query 
+                        AND "fl"."status" = 0 
+                        LIMIT 20)
+                        UNION
+                        (SELECT "follower" 
+                        FROM "follower" AS "fl" 
+                        WHERE "fl"."userId" = :authUserId 
+                        AND "fl"."follower" ILIKE :query 
+                        AND "fl"."status" = 0 
+                        LIMIT 20)
+                    )`)
+                }
+            },
+            replacements: {
+                authUserId: authUserId,
+                query: `%${query}%`
+            }
+        });
+
+        return referenceUser;
+    } catch (error) {
+        console.log(">>> ❌ Error: ", error);
+        return null;
+    }
+};
+
 module.exports = {
     createUserService,
     getUserService,
@@ -397,5 +436,6 @@ module.exports = {
     updateUserService,
     createFollowUser,
     getFollow,
-    deleteFollowUser
+    deleteFollowUser,
+    findReferenceUserService
 }

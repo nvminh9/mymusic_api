@@ -1,7 +1,7 @@
 const { getUserArticleTotal } = require("../../../services/articleService");
 const { getUserSongs } = require("../../../services/musicService");
 const { getUserPlaylistsService } = require("../../../services/playlistService");
-const { getUserService, getUserFollowerTotalService, getUserFollowTotalService, updateUserService, createFollowUser, getFollow, deleteFollowUser } = require("../../../services/userService");
+const { getUserService, getUserFollowerTotalService, getUserFollowTotalService, updateUserService, createFollowUser, getFollow, deleteFollowUser, findReferenceUserService } = require("../../../services/userService");
 const dotenv = require('dotenv');
 dotenv.config();
 const jwt = require("jsonwebtoken");
@@ -263,6 +263,41 @@ class UserController{
                 result.data = checkDeleteFollowUser;
                 return res.status(200).json(result);
             };
+        } catch (error) {
+            console.log(">>> ❌ Error: ", error);
+            return null;
+        }
+    };
+
+    // Tìm kiếm người dùng có sự liên quan (theo dõi, đang theo dõi)
+    // [GET] /user/reference/search?q=<query>
+    async findReferenceUser(req, res){
+        try {
+            const result = {};
+            const { q } = req.query;
+
+            // Token
+            const token = req.headers.authorization.split(' ')[1];
+            // Lấy dữ liệu của auth user
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const authUserId = decoded.id;
+
+            // Service
+            const referenceUser = await findReferenceUserService(q, authUserId);
+
+            // Kiểm tra            
+            if(referenceUser === null){
+                result.status = 500;
+                result.message = 'Internal error';
+                result.data = null;
+                return res.status(500).json(result); 
+            }
+
+            // Kết quả
+            result.status = referenceUser?.status ? referenceUser?.status : 200;
+            result.message = 'Kết quả tìm kiếm';
+            result.data = referenceUser;
+            return res.status(result.status).json(result);
         } catch (error) {
             console.log(">>> ❌ Error: ", error);
             return null;

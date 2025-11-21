@@ -20,6 +20,11 @@ const Conversation = sequelize.define(
     avatar: {
         type: DataTypes.STRING,
     },
+    newestMessageCreatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW, // Mặc định là thời gian hiện tại
+        allowNull: true,
+    },
     createdBy: {
         type: DataTypes.UUID,
     },
