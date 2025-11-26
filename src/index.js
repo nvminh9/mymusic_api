@@ -18,10 +18,7 @@ const genreTrendingJobs = require('./jobs/genreTrendingJobs');
 const { sequelize, Genre } = require('./app/models/sequelize');
 // Sync (Đồng bộ lại database)
 (async () => {
-    try {
-        const user = await sequelize.query(`SELECT "userId","name","userName" FROM "user"`);
-        console.log(user);
-        
+    try {        
         // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
         // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
         await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
@@ -61,32 +58,6 @@ const { sequelize, Genre } = require('./app/models/sequelize');
 
 // -- Config App Port --
 const port = process.env.port || 3700;
-console.log(`
-    
-    
-    
-    
-    
-    
-    ***
-    DB LOG TEST
-    DB LOG TEST
-    DB HOST: ${process.env.DB_HOST}
-    DB LOG TEST
-    DB NAME: ${process.env.DB_NAME}
-    DB LOG TEST
-    DB LOG TEST
-    ***
-    
-    
-    
-    
-    
-    
-    
-    `);
-console.log("DB HOST: ", process.env.DB_HOST);
-console.log("DB NAME: ", process.env.DB_NAME);
 
 // -- Config Request Log --
 // Log all request

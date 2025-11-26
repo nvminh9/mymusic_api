@@ -60,7 +60,7 @@ class MusicController{
                     videoFile = req.files["audioAndMediaFiles"][i];
                 }
             };
-            const { name, duration, genreName } = req.body;
+            const { name, duration, genreName, genreId } = req.body;
             
             // Token
             const token = req.headers.authorization.split(' ')[1];
@@ -119,6 +119,7 @@ class MusicController{
                 name: name ? name : "",
                 duration: duration ? duration : null,
                 embedding: `[${songEmbedding.join(',')}]`,
+                genreId: genreId,
             };
             const song = await updateSongService(songId, userId, songData, 'create');
 

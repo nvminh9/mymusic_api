@@ -69,7 +69,8 @@ const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 30 * 1024 * 1024 // Giới hạn file 30MB (tính bằng bytes)
+        // fileSize: 30 * 1024 * 1024 // Giới hạn file 30MB (tính bằng bytes)
+        fileSize: 10 * 1024 * 1024 // Giới hạn file 10MB (tính bằng bytes)
     }
 });
 
@@ -78,7 +79,8 @@ const uploadMusic = multer({
     storage: storageMusicFile,
     fileFilter: musicFileFilter,
     limits: {
-        fileSize: 30 * 1024 * 1024 // Giới hạn file 30MB (tính bằng bytes)
+        // fileSize: 30 * 1024 * 1024 // Giới hạn file 30MB (tính bằng bytes)
+        fileSize: 10 * 1024 * 1024 // Giới hạn file 10MB (tính bằng bytes)
     }
 });
 
