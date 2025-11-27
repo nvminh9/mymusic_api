@@ -19,17 +19,17 @@ const { sequelize, Genre } = require('./app/models/sequelize');
 // Sync (Đồng bộ lại database)
 (async () => {
     try {        
-        // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
-        // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
-        await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
-        
-        // Bất extension pg_trgm
+        // Bật extension pg_trgm
         await sequelize.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
         console.log('✅ pg_trgm extension enabled');
         
         // Bật extension pgvector
         await sequelize.query(`CREATE EXTENSION IF NOT EXISTS vector;`);
         console.log('✅ pgvector extension enabled');
+
+        // await sequelize.sync({ alter: true }); // Chỉ cập nhật những thứ thay đổi
+        // await sequelize.sync({ force: true }); // Xóa và tạo lại bảng
+        await sequelize.sync(); // Tạo bảng nếu nó chưa tồn tại
 
         // Tạo các thể loại nhạc
         const allGenre = await Genre.findAll();
