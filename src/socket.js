@@ -24,17 +24,25 @@ function initSocket(server) {
     });
 
     // Redis clients for adapter
-    const pubClient = new Redis(REDIS_URL);
+    // const pubClient = new Redis(REDIS_URL);
     // const pubClient = new Redis({
     //     host: process.env.REDIS_HOST || '127.0.0.1',
     //     port: process.env.REDIS_PORT || '6379'
     // });
+    const pubClient = Redis.createClient({
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: process.env.REDIS_PORT || '6379'
+    });
     const subClient = pubClient.duplicate();
     io.adapter(createAdapter(pubClient, subClient));
 
     // A separate Redis client for presence and other ops
     // const redis = new Redis(REDIS_URL);
-    const redis = new Redis({
+    // const redis = new Redis({
+    //     host: process.env.REDIS_HOST || '127.0.0.1',
+    //     port: process.env.REDIS_PORT || '6379'
+    // });
+    const redis = Redis.createClient({
         host: process.env.REDIS_HOST || '127.0.0.1',
         port: process.env.REDIS_PORT || '6379'
     });
