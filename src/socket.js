@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
-// const { Redis } = require("ioredis");
-// const { createAdapter } = require("@socket.io/redis-adapter");
+const { Redis } = require("ioredis");
+const { createAdapter } = require("@socket.io/redis-adapter");
 const dotenv = require('dotenv');
 dotenv.config();
 const jwt = require("jsonwebtoken");
@@ -8,7 +8,7 @@ const { sequelize, Conversation, ConversationParticipant, Message, MessageStatus
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require("uuid");
 
-// const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+const REDIS_URL = `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}` || "redis://127.0.0.1:6379";
 const JWT_SECRET = process.env.JWT_SECRET || "changeme";
 const STATUS_CREATE_THRESHOLD = parseInt(process.env.STATUS_CREATE_THRESHOLD || "500", 10);
 
@@ -24,20 +24,20 @@ function initSocket(server) {
     });
 
     // Redis clients for adapter
-    // const pubClient = new Redis(REDIS_URL);
+    const pubClient = new Redis(REDIS_URL);
     // const pubClient = new Redis({
     //     host: process.env.REDIS_HOST || '127.0.0.1',
     //     port: process.env.REDIS_PORT || '6379'
     // });
-    // const subClient = pubClient.duplicate();
-    // io.adapter(createAdapter(pubClient, subClient));
+    const subClient = pubClient.duplicate();
+    io.adapter(createAdapter(pubClient, subClient));
 
     // A separate Redis client for presence and other ops
     // const redis = new Redis(REDIS_URL);
-    // const redis = new Redis({
-    //     host: process.env.REDIS_HOST || '127.0.0.1',
-    //     port: process.env.REDIS_PORT || '6379'
-    // });
+    const redis = new Redis({
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: process.env.REDIS_PORT || '6379'
+    });
 
     // Middleware for auth during handshake
     io.use(async (socket, next) => {
@@ -60,10 +60,10 @@ function initSocket(server) {
             socket.join(`user:${payload.id}`);
 
             // add socket id to presence set
-            // await redis.sadd(`${PRESENCE_KEY}${payload.id}`, socket.id);
+            await redis.sadd(`${PRESENCE_KEY}${payload.id}`, socket.id);
 
             // broadcast presence to followers/contacts if needed (simplified)
-            // io.to(`user:${payload.id}`).emit('presence', { userId: payload.id, online: true });
+            io.to(`user:${payload.id}`).emit('presence', { userId: payload.id, online: true });
 
             return next();
         } catch (err) {
@@ -402,19 +402,26 @@ function initSocket(server) {
                     lastReadMessageId: lastReadMessageId,
                 });
             });
+
+            // Thông báo user này online
+            socket.broadcast.emit("presence", { userId, online: true });
         });
 
         // Disconnect handling: remove from presence set
         socket.on("disconnect", async (reason) => {
             console.log(`Socket disconnected ${socket.id} user:${userId} reason:${reason}`);
             try {
-                // await redis.srem(`${PRESENCE_KEY}${userId}`, socket.id);
+                const now = new Date();
+
+                await redis.srem(`${PRESENCE_KEY}${userId}`, socket.id);
                 // check if user has any sockets left
-                // const remaining = await redis.scard(`${PRESENCE_KEY}${userId}`);
+                const remaining = await redis.scard(`${PRESENCE_KEY}${userId}`);
                 if (remaining === 0) {
-                // user offline
-                socket.broadcast.emit("presence", { userId, online: false });
+                    // user offline
+                    socket.broadcast.emit("presence", { userId, online: false, offlineAt: now });
                 }
+                // user offline (test)
+                socket.broadcast.emit("presence", { userId, online: false, offlineAt: now });
             } catch (err) {
                 console.error("disconnect presence error", err);
             }

@@ -120,6 +120,7 @@ class MusicController{
                 duration: duration ? duration : null,
                 embedding: `[${songEmbedding.join(',')}]`,
                 genreId: genreId,
+                genreName: genreName,
             };
             const song = await updateSongService(songId, userId, songData, 'create');
 

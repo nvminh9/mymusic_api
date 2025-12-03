@@ -218,9 +218,9 @@ const getListPlaylistOfUserService = async (userId, authUserId) => {
         // Kiểm tra
         if(playlistArray?.filter(Boolean)?.length === 0){
             return {
-                status: 404,
+                status: 200,
                 message: 'Không tìm thấy danh sách phát nào',
-                data: null
+                data: []
             };
         }
 
