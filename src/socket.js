@@ -8,6 +8,9 @@ const { sequelize, Conversation, ConversationParticipant, Message, MessageStatus
 const { Op } = require('sequelize');
 const { v4: uuidv4 } = require("uuid");
 
+// Determine if in a production env or not
+const isProduction = process.env.DB_HOST !== 'localhost';
+
 const REDIS_URL = `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}` || "redis://127.0.0.1:6379";
 const JWT_SECRET = process.env.JWT_SECRET || "changeme";
 const STATUS_CREATE_THRESHOLD = parseInt(process.env.STATUS_CREATE_THRESHOLD || "500", 10);
@@ -23,16 +26,32 @@ function initSocket(server) {
         pingTimeout: 60000,
     });
 
+    // Redis Connection Options
+    const redisConnectionOptions = {
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: process.env.REDIS_PORT || '6379',
+    };
+    // (For production with SSL)
+    if(isProduction){
+        redisConnectionOptions.tls = {
+            rejectUnauthorized: false // Use this if you don't have a specific CA certificate
+        }
+    }
+
     // Redis clients for adapter
     // const pubClient = new Redis(REDIS_URL);
     // const pubClient = new Redis({
     //     host: process.env.REDIS_HOST || '127.0.0.1',
+    //     port: process.env.REDIS_PORT || '6379',
+    //     // tls: {
+    //     //     rejectUnauthorized: false // Use this if you don't have a specific CA certificate
+    //     // }
+    // });
+    // const pubClient = Redis.createClient({
+    //     host: process.env.REDIS_HOST || '127.0.0.1',
     //     port: process.env.REDIS_PORT || '6379'
     // });
-    const pubClient = Redis.createClient({
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: process.env.REDIS_PORT || '6379'
-    });
+    const pubClient = new Redis(redisConnectionOptions);
     const subClient = pubClient.duplicate();
     io.adapter(createAdapter(pubClient, subClient));
 
@@ -40,11 +59,25 @@ function initSocket(server) {
     // const redis = new Redis(REDIS_URL);
     // const redis = new Redis({
     //     host: process.env.REDIS_HOST || '127.0.0.1',
+    //     port: process.env.REDIS_PORT || '6379',
+    //     // tls: {
+    //     //     rejectUnauthorized: false // Use this if you don't have a specific CA certificate
+    //     // }
+    // });
+    // const redis = Redis.createClient({
+    //     host: process.env.REDIS_HOST || '127.0.0.1',
     //     port: process.env.REDIS_PORT || '6379'
     // });
-    const redis = Redis.createClient({
-        host: process.env.REDIS_HOST || '127.0.0.1',
-        port: process.env.REDIS_PORT || '6379'
+    const redis = new Redis(redisConnectionOptions);
+
+    // Handle Redis connection errors
+    pubClient.on('error', (err) => {
+        console.error('ioredis (pubClient) connection error:', err);
+        // Optional: Implement a more robust logging mechanism or alerting here
+    });
+    redis.on('error', (err) => {
+        console.error('ioredis (redis) connection error:', err);
+        // Optional: Implement a more robust logging mechanism or alerting here
     });
 
     // Middleware for auth during handshake
