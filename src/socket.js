@@ -32,11 +32,11 @@ function initSocket(server) {
         port: process.env.REDIS_PORT || '6379',
     };
     // (For production with SSL)
-    if(isProduction){
-        redisConnectionOptions.tls = {
-            rejectUnauthorized: false // Use this if you don't have a specific CA certificate
-        }
-    }
+    // if(isProduction){
+    //     redisConnectionOptions.tls = {
+    //         rejectUnauthorized: false // Use this if you don't have a specific CA certificate
+    //     }
+    // }
 
     // Redis clients for adapter
     // const pubClient = new Redis(REDIS_URL);
